@@ -158,6 +158,11 @@ export class Ship extends BaseEntity {
 
     // Update visual effects
     this.updateVisualEffects(dt);
+    
+    // Update mesh rotation to match entity rotation
+    if (this.mesh) {
+      this.mesh.rotation.z = this.rotation;
+    }
   }
 
   private updateRotation(dt: number): void {

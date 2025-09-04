@@ -150,32 +150,47 @@ export const EntitySystemTest: React.FC = () => {
 
     // Mouse rotation
     const sceneRefs = threeScene.sceneRefs.current;
-    if (sceneRefs) {
-      // Convert mouse position to world coordinates
-      const canvas = sceneRefs.renderer.domElement;
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = ((mousePos.current.x - rect.width / 2) / rect.width) * 2;
-      const mouseY = -((mousePos.current.y - rect.height / 2) / rect.height) * 2;
+    if (sceneRefs && threeScene.mountRef.current) {
+      // Get mouse position relative to canvas
+      const rect = threeScene.mountRef.current.getBoundingClientRect();
+      const mouseX = mousePos.current.x - rect.left;
+      const mouseY = mousePos.current.y - rect.top;
       
-      // Calculate angle from ship to mouse
-      const angle = Math.atan2(mouseX, mouseY);
+      // Convert to normalized device coordinates
+      const normalizedX = (mouseX / rect.width) * 2 - 1;
+      const normalizedY = -((mouseY / rect.height) * 2 - 1);
+      
+      // Convert to world coordinates using the camera
+      const camera = sceneRefs.camera;
+      const worldX = normalizedX * (camera.right - camera.left) / 2;
+      const worldY = normalizedY * (camera.top - camera.bottom) / 2;
+      
+      // Calculate angle from ship to mouse in world space
+      const dx = worldX - ship.position.x;
+      const dy = worldY - ship.position.y;
+      const angle = Math.atan2(dx, dy); // Note: atan2(dx, dy) for "up" facing ship
+      
       ship.setTargetRotation(angle);
     }
   };
 
   const handleShooting = (ship: Ship, entityManager: EntityManager) => {
-    // Shoot with space or mouse click
+    // Shoot with space key
     if (keysPressed.current.has('Space')) {
-      // Simple shooting - would need rate limiting in real implementation
-      if (Math.random() > 0.95) { // Rough rate limiting
-        const direction = ship.rotation + Math.PI / 2; // Ship faces up
-        entityManager.spawnBullet(
+      // Use ship's built-in rate limiting
+      if (ship.canShoot()) {
+        console.log('[EntitySystemTest] Firing bullet at rotation:', ship.rotation);
+        const bullet = entityManager.spawnBullet(
           ship.position.x,
           ship.position.y,
-          direction,
+          ship.rotation, // Use ship's actual rotation
           ship.velocity.x * 0.1,
           ship.velocity.y * 0.1
         );
+        console.log('[EntitySystemTest] Bullet spawned:', bullet);
+        
+        // Update ship's shot time
+        ship.shoot(); // This updates the internal cooldown
       }
     }
   };
