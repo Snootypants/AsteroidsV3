@@ -2,13 +2,15 @@ import { BaseEntity } from '../entities/BaseEntity';
 import { Ship } from '../entities/Ship';
 import { Asteroid } from '../entities/Asteroid';
 import { Bullet } from '../entities/Bullet';
+import { Enemy } from '../entities/Enemy';
+import { Pickup } from '../entities/Pickup';
 import { EntityManager } from './EntityManager';
 import { PhysicsSystem } from './PhysicsSystem';
 
 export interface CollisionEvent {
   entityA: BaseEntity;
   entityB: BaseEntity;
-  type: 'ship-asteroid' | 'bullet-asteroid' | 'ship-bullet' | 'asteroid-asteroid';
+  type: 'ship-asteroid' | 'bullet-asteroid' | 'ship-bullet' | 'ship-enemy' | 'bullet-enemy' | 'ship-pickup' | 'enemy-bullet';
 }
 
 /**
@@ -48,6 +50,9 @@ export class CollisionSystem {
     this.checkShipAsteroidCollisions();
     this.checkBulletAsteroidCollisions();
     this.checkShipBulletCollisions();
+    this.checkShipEnemyCollisions();
+    this.checkBulletEnemyCollisions();
+    this.checkShipPickupCollisions();
   }
   
   /**
@@ -59,7 +64,9 @@ export class CollisionSystem {
     const allEntities = [
       ...this.entityManager.getActiveEntities('ships'),
       ...this.entityManager.getActiveEntities('asteroids'),
-      ...this.entityManager.getActiveEntities('bullets')
+      ...this.entityManager.getActiveEntities('bullets'),
+      ...(this.entityManager.getActiveEntities('enemies') || []),
+      ...(this.entityManager.getActiveEntities('pickups') || [])
     ];
     
     for (const entity of allEntities) {
@@ -185,6 +192,74 @@ export class CollisionSystem {
       }
     }
   }
+
+  /**
+   * Check collisions between ships and enemies
+   */
+  private checkShipEnemyCollisions(): void {
+    const ships = this.entityManager.getActiveEntities('ships') as Ship[];
+    
+    for (const ship of ships) {
+      if (ship.isInvulnerable()) continue;
+      
+      const gridKey = this.getGridKey(ship.position.x, ship.position.y);
+      const nearbyEntities = this.grid.get(gridKey) || [];
+      
+      for (const entity of nearbyEntities) {
+        if (entity instanceof Enemy && entity.isAlive() && PhysicsSystem.areColliding(ship, entity)) {
+          this.triggerCollision({
+            entityA: ship,
+            entityB: entity,
+            type: 'ship-enemy'
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Check collisions between bullets and enemies
+   */
+  private checkBulletEnemyCollisions(): void {
+    const bullets = this.entityManager.getActiveEntities('bullets') as Bullet[];
+    
+    for (const bullet of bullets) {
+      const gridKey = this.getGridKey(bullet.position.x, bullet.position.y);
+      const nearbyEntities = this.grid.get(gridKey) || [];
+      
+      for (const entity of nearbyEntities) {
+        if (entity instanceof Enemy && entity.isAlive() && PhysicsSystem.areColliding(bullet, entity)) {
+          this.triggerCollision({
+            entityA: bullet,
+            entityB: entity,
+            type: 'bullet-enemy'
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Check collisions between ships and pickups
+   */
+  private checkShipPickupCollisions(): void {
+    const ships = this.entityManager.getActiveEntities('ships') as Ship[];
+    
+    for (const ship of ships) {
+      const gridKey = this.getGridKey(ship.position.x, ship.position.y);
+      const nearbyEntities = this.grid.get(gridKey) || [];
+      
+      for (const entity of nearbyEntities) {
+        if (entity instanceof Pickup && PhysicsSystem.areColliding(ship, entity)) {
+          this.triggerCollision({
+            entityA: ship,
+            entityB: entity,
+            type: 'ship-pickup'
+          });
+        }
+      }
+    }
+  }
   
   /**
    * Trigger collision event and call registered callbacks
@@ -262,6 +337,69 @@ export class CollisionSystem {
     
     // Minor damage to ship
     ship.setInvulnerable(1.0);
+  }
+
+  /**
+   * Handle ship-enemy collision
+   * @param ship The ship entity
+   * @param enemy The enemy entity
+   * @param entityManager Entity manager for scene access
+   */
+  public static handleShipEnemyCollision(ship: Ship, enemy: Enemy, entityManager: EntityManager): void {
+    const scene = entityManager.getScene();
+    
+    // Both ship and enemy take damage
+    ship.setInvulnerable(2.0);
+    
+    if (enemy.takeDamage(1)) {
+      // Enemy destroyed - will be handled by scoring system
+      enemy.despawn(scene);
+    }
+    
+    // Apply knockback to both
+    const direction = PhysicsSystem.getDirection(enemy, ship);
+    PhysicsSystem.applyImpulse(ship, direction.x * 40, direction.y * 40);
+    PhysicsSystem.applyImpulse(enemy, -direction.x * 20, -direction.y * 20);
+  }
+
+  /**
+   * Handle bullet-enemy collision
+   * @param bullet The bullet entity
+   * @param enemy The enemy entity
+   * @param entityManager Entity manager for scene access
+   */
+  public static handleBulletEnemyCollision(bullet: Bullet, enemy: Enemy, entityManager: EntityManager): void {
+    const scene = entityManager.getScene();
+    
+    // Destroy bullet
+    bullet.despawn(scene);
+    
+    // Damage enemy
+    if (enemy.takeDamage(bullet.damage)) {
+      // Enemy destroyed - will be handled by scoring system
+      enemy.despawn(scene);
+      
+      // Chance to spawn pickup
+      if (Math.random() < 0.15) { // 15% chance
+        const pickup = Pickup.createRandom(enemy.position.x, enemy.position.y);
+        entityManager.addExistingEntity(pickup, 'pickups');
+        pickup.spawn(scene);
+      }
+    }
+  }
+
+  /**
+   * Handle ship-pickup collision
+   * @param ship The ship entity
+   * @param pickup The pickup entity
+   * @param entityManager Entity manager for scene access
+   */
+  public static handleShipPickupCollision(ship: Ship, pickup: Pickup, entityManager: EntityManager): void {
+    // Apply pickup effect
+    if (pickup.applyToShip(ship)) {
+      // Remove pickup if it was consumed
+      pickup.despawn(entityManager.getScene());
+    }
   }
   
   /**
