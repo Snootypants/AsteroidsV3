@@ -6,6 +6,10 @@ import { Enemy } from '../entities/Enemy';
 import { Pickup } from '../entities/Pickup';
 import { EntityManager } from './EntityManager';
 import { PhysicsSystem } from './PhysicsSystem';
+import { AudioManager } from './AudioManager';
+import { ParticleSystem } from './ParticleSystem';
+import { VFXManager } from './VFXManager';
+import { DebrisSystem } from './DebrisSystem';
 
 export interface CollisionEvent {
   entityA: BaseEntity;
@@ -25,8 +29,24 @@ export class CollisionSystem {
   private gridSize = 100;
   private grid: Map<string, BaseEntity[]> = new Map();
   
-  constructor(entityManager: EntityManager) {
+  // Audio and VFX systems (optional)
+  private audioManager?: AudioManager;
+  private particleSystem?: ParticleSystem;
+  private vfxManager?: VFXManager;
+  private debrisSystem?: DebrisSystem;
+  
+  constructor(
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager,
+    debrisSystem?: DebrisSystem
+  ) {
     this.entityManager = entityManager;
+    this.audioManager = audioManager;
+    this.particleSystem = particleSystem;
+    this.vfxManager = vfxManager;
+    this.debrisSystem = debrisSystem;
   }
   
   /**
@@ -138,6 +158,14 @@ export class CollisionSystem {
       
       for (const entity of nearbyEntities) {
         if (entity instanceof Asteroid && PhysicsSystem.areColliding(ship, entity)) {
+          // Handle collision with integrated effects
+          CollisionSystem.handleShipAsteroidCollision(
+            ship,
+            entity,
+            this.audioManager,
+            this.vfxManager
+          );
+          
           this.triggerCollision({
             entityA: ship,
             entityB: entity,
@@ -160,6 +188,17 @@ export class CollisionSystem {
       
       for (const entity of nearbyEntities) {
         if (entity instanceof Asteroid && PhysicsSystem.areColliding(bullet, entity)) {
+          // Handle collision with integrated effects
+          CollisionSystem.handleBulletAsteroidCollision(
+            bullet,
+            entity,
+            this.entityManager,
+            this.audioManager,
+            this.particleSystem,
+            this.vfxManager,
+            this.debrisSystem
+          );
+          
           this.triggerCollision({
             entityA: bullet,
             entityB: entity,
@@ -183,6 +222,15 @@ export class CollisionSystem {
       for (const bullet of bullets) {
         // Skip bullets fired by this ship (would need owner tracking)
         if (PhysicsSystem.areColliding(ship, bullet)) {
+          // Handle collision with integrated effects
+          CollisionSystem.handleShipBulletCollision(
+            ship,
+            bullet,
+            this.entityManager,
+            this.audioManager,
+            this.particleSystem
+          );
+          
           this.triggerCollision({
             entityA: ship,
             entityB: bullet,
@@ -207,6 +255,17 @@ export class CollisionSystem {
       
       for (const entity of nearbyEntities) {
         if (entity instanceof Enemy && entity.isAlive() && PhysicsSystem.areColliding(ship, entity)) {
+          // Handle collision with integrated effects
+          CollisionSystem.handleShipEnemyCollision(
+            ship,
+            entity,
+            this.entityManager,
+            this.audioManager,
+            this.particleSystem,
+            this.vfxManager,
+            this.debrisSystem
+          );
+          
           this.triggerCollision({
             entityA: ship,
             entityB: entity,
@@ -229,6 +288,17 @@ export class CollisionSystem {
       
       for (const entity of nearbyEntities) {
         if (entity instanceof Enemy && entity.isAlive() && PhysicsSystem.areColliding(bullet, entity)) {
+          // Handle collision with integrated effects
+          CollisionSystem.handleBulletEnemyCollision(
+            bullet,
+            entity,
+            this.entityManager,
+            this.audioManager,
+            this.particleSystem,
+            this.vfxManager,
+            this.debrisSystem
+          );
+          
           this.triggerCollision({
             entityA: bullet,
             entityB: entity,
@@ -251,6 +321,16 @@ export class CollisionSystem {
       
       for (const entity of nearbyEntities) {
         if (entity instanceof Pickup && PhysicsSystem.areColliding(ship, entity)) {
+          // Handle collision with integrated effects
+          CollisionSystem.handleShipPickupCollision(
+            ship,
+            entity,
+            this.entityManager,
+            this.audioManager,
+            this.particleSystem,
+            this.vfxManager
+          );
+          
           this.triggerCollision({
             entityA: ship,
             entityB: entity,
@@ -283,9 +363,45 @@ export class CollisionSystem {
    * Handle bullet-asteroid collision with asteroid splitting
    * @param bullet The bullet entity
    * @param asteroid The asteroid entity
+   * @param entityManager Entity manager for scene access
+   * @param audioManager Optional audio manager for sound effects
+   * @param particleSystem Optional particle system for explosion effects
+   * @param vfxManager Optional VFX manager for screen shake
+   * @param debrisSystem Optional debris system for destruction particles
    */
-  public static handleBulletAsteroidCollision(bullet: Bullet, asteroid: Asteroid, entityManager: EntityManager): void {
+  public static handleBulletAsteroidCollision(
+    bullet: Bullet,
+    asteroid: Asteroid,
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager,
+    debrisSystem?: DebrisSystem
+  ): void {
     const scene = entityManager.getScene();
+    const position = asteroid.position.clone();
+    
+    // Determine explosion type based on asteroid size
+    let explosionType: string;
+    let debrisType: string;
+    let shakePreset: string;
+    
+    if (asteroid.radius >= 15) {
+      explosionType = 'explosion_large';
+      debrisType = 'asteroid_large';
+      shakePreset = 'large_explosion';
+      audioManager?.playSound('combat.explosion_large');
+    } else if (asteroid.radius >= 8) {
+      explosionType = 'explosion_medium';
+      debrisType = 'asteroid_medium';
+      shakePreset = 'medium_explosion';
+      audioManager?.playSound('combat.explosion_medium');
+    } else {
+      explosionType = 'explosion_small';
+      debrisType = 'asteroid_small';
+      shakePreset = 'small_explosion';
+      audioManager?.playSound('combat.explosion_small');
+    }
     
     // Destroy the bullet
     bullet.despawn(scene);
@@ -300,18 +416,25 @@ export class CollisionSystem {
       piece.spawn(scene);
     }
     
-    // Apply some screen shake effect (would be handled by camera system)
-    // Add particle effects (would be handled by particle system)
-    
-    // Award points (would be handled by game state)
+    // Add visual and audio effects
+    particleSystem?.emit(explosionType, position);
+    vfxManager?.shakeScreen(shakePreset);
+    debrisSystem?.spawnDebris(debrisType, position);
   }
   
   /**
    * Handle ship-asteroid collision
    * @param ship The ship entity
    * @param asteroid The asteroid entity
+   * @param audioManager Optional audio manager for sound effects
+   * @param vfxManager Optional VFX manager for screen shake and flash
    */
-  public static handleShipAsteroidCollision(ship: Ship, asteroid: Asteroid): void {
+  public static handleShipAsteroidCollision(
+    ship: Ship,
+    asteroid: Asteroid,
+    audioManager?: AudioManager,
+    vfxManager?: VFXManager
+  ): void {
     // Make ship invulnerable temporarily
     ship.setInvulnerable(2.0);
     
@@ -319,10 +442,10 @@ export class CollisionSystem {
     const direction = PhysicsSystem.getDirection(asteroid, ship);
     PhysicsSystem.applyImpulse(ship, direction.x * 30, direction.y * 30);
     
-    // Apply damage to ship (would be handled by health system)
-    // Reduce lives or health
-    // Play damage sound
-    // Add screen shake
+    // Audio and visual feedback
+    audioManager?.playSound('ship.damage', 1.0);
+    vfxManager?.shakeScreen('ship_hit');
+    vfxManager?.flash('damage_red');
   }
   
   /**
@@ -330,13 +453,25 @@ export class CollisionSystem {
    * @param ship The ship entity
    * @param bullet The bullet entity
    * @param entityManager Entity manager for scene access
+   * @param audioManager Optional audio manager for sound effects
+   * @param particleSystem Optional particle system for hit effects
    */
-  public static handleShipBulletCollision(ship: Ship, bullet: Bullet, entityManager: EntityManager): void {
+  public static handleShipBulletCollision(
+    ship: Ship,
+    bullet: Bullet,
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem
+  ): void {
     // Only if friendly fire is enabled
     bullet.despawn(entityManager.getScene());
     
     // Minor damage to ship
     ship.setInvulnerable(1.0);
+    
+    // Audio and visual feedback
+    audioManager?.playSound('combat.bullet_hit', 0.8);
+    particleSystem?.emit('sparks', bullet.position.clone());
   }
 
   /**
@@ -344,16 +479,40 @@ export class CollisionSystem {
    * @param ship The ship entity
    * @param enemy The enemy entity
    * @param entityManager Entity manager for scene access
+   * @param audioManager Optional audio manager for sound effects
+   * @param particleSystem Optional particle system for collision effects
+   * @param vfxManager Optional VFX manager for screen shake
+   * @param debrisSystem Optional debris system for destruction particles
    */
-  public static handleShipEnemyCollision(ship: Ship, enemy: Enemy, entityManager: EntityManager): void {
+  public static handleShipEnemyCollision(
+    ship: Ship,
+    enemy: Enemy,
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager,
+    debrisSystem?: DebrisSystem
+  ): void {
     const scene = entityManager.getScene();
+    const collisionPoint = enemy.position.clone();
     
     // Both ship and enemy take damage
     ship.setInvulnerable(2.0);
     
+    // Audio and visual feedback
+    audioManager?.playSound('ship.damage', 1.0);
+    vfxManager?.shakeScreen('ship_hit');
+    vfxManager?.flash('damage_red');
+    particleSystem?.emit('sparks', collisionPoint);
+    
     if (enemy.takeDamage(1)) {
-      // Enemy destroyed - will be handled by scoring system
+      // Enemy destroyed
       enemy.despawn(scene);
+      
+      // Add destruction effects
+      audioManager?.playSound('combat.explosion_medium');
+      particleSystem?.emit('explosion_medium', collisionPoint);
+      debrisSystem?.spawnDebris('enemy_fragments', collisionPoint);
     }
     
     // Apply knockback to both
@@ -367,17 +526,40 @@ export class CollisionSystem {
    * @param bullet The bullet entity
    * @param enemy The enemy entity
    * @param entityManager Entity manager for scene access
+   * @param audioManager Optional audio manager for sound effects
+   * @param particleSystem Optional particle system for hit/explosion effects
+   * @param vfxManager Optional VFX manager for screen shake
+   * @param debrisSystem Optional debris system for destruction particles
    */
-  public static handleBulletEnemyCollision(bullet: Bullet, enemy: Enemy, entityManager: EntityManager): void {
+  public static handleBulletEnemyCollision(
+    bullet: Bullet,
+    enemy: Enemy,
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager,
+    debrisSystem?: DebrisSystem
+  ): void {
     const scene = entityManager.getScene();
+    const hitPosition = enemy.position.clone();
     
     // Destroy bullet
     bullet.despawn(scene);
     
+    // Hit sound effect
+    audioManager?.playSound('combat.bullet_hit', 0.8);
+    particleSystem?.emit('sparks', hitPosition);
+    
     // Damage enemy
     if (enemy.takeDamage(bullet.damage)) {
-      // Enemy destroyed - will be handled by scoring system
+      // Enemy destroyed
       enemy.despawn(scene);
+      
+      // Destruction effects
+      audioManager?.playSound('combat.explosion_medium');
+      vfxManager?.shakeScreen('medium_explosion');
+      particleSystem?.emit('explosion_medium', hitPosition);
+      debrisSystem?.spawnDebris('enemy_fragments', hitPosition, enemy.velocity.clone());
       
       // Chance to spawn pickup
       if (Math.random() < 0.15) { // 15% chance
@@ -393,12 +575,48 @@ export class CollisionSystem {
    * @param ship The ship entity
    * @param pickup The pickup entity
    * @param entityManager Entity manager for scene access
+   * @param audioManager Optional audio manager for sound effects
+   * @param particleSystem Optional particle system for collection effects
+   * @param vfxManager Optional VFX manager for visual feedback
    */
-  public static handleShipPickupCollision(ship: Ship, pickup: Pickup, entityManager: EntityManager): void {
+  public static handleShipPickupCollision(
+    ship: Ship,
+    pickup: Pickup,
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager
+  ): void {
+    const pickupPosition = pickup.position.clone();
+    const pickupType = pickup.pickupType; // Use the pickupType property
+    
     // Apply pickup effect
     if (pickup.applyToShip(ship)) {
       // Remove pickup if it was consumed
       pickup.despawn(entityManager.getScene());
+      
+      // Audio and visual feedback based on pickup type
+      switch (pickupType) {
+        case 'salvage':
+          audioManager?.playSound('pickup.salvage');
+          vfxManager?.flash('pickup_green');
+          break;
+        case 'health':
+        case 'shield':
+          audioManager?.playSound('pickup.health');
+          vfxManager?.flash('pickup_green');
+          break;
+        case 'rapidfire':
+        case 'pierce':
+        case 'damage':
+          audioManager?.playSound('pickup.powerup');
+          vfxManager?.flash('powerup_blue');
+          vfxManager?.shakeScreen('pickup_collect');
+          break;
+      }
+      
+      // Collection particle effects
+      particleSystem?.emit('sparkle', pickupPosition);
     }
   }
   

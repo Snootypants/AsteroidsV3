@@ -2,6 +2,10 @@ import { EntityManager } from './EntityManager';
 import { PhysicsSystem } from './PhysicsSystem';
 import { AsteroidSize } from '../entities/Asteroid';
 import { WORLD } from '../constants/gameConstants';
+import { AudioManager } from './AudioManager';
+import { ParticleSystem } from './ParticleSystem';
+import { VFXManager } from './VFXManager';
+import * as THREE from 'three';
 
 export interface WaveConfig {
   waveNumber: number;
@@ -38,13 +42,27 @@ export class WaveSystem {
   private static readonly ENEMY_START_WAVE = 3;
   private static readonly MAX_ENEMIES = 5;
   
+  // Audio and VFX systems (optional)
+  private audioManager?: AudioManager;
+  private particleSystem?: ParticleSystem;
+  private vfxManager?: VFXManager;
+  
   // Callbacks
   private onWaveStart?: (wave: number) => void;
   private onWaveComplete?: (wave: number, perfect: boolean) => void;
   private onWaveChange?: (waveState: WaveState) => void;
   
-  constructor(entityManager: EntityManager) {
+  constructor(
+    entityManager: EntityManager,
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager
+  ) {
     this.entityManager = entityManager;
+    this.audioManager = audioManager;
+    this.particleSystem = particleSystem;
+    this.vfxManager = vfxManager;
+    
     this.waveState = {
       currentWave: 1,
       waveActive: false,
@@ -84,6 +102,32 @@ export class WaveSystem {
     if (this.waveState.waveActive) return;
     
     const waveConfig = this.generateWaveConfig(this.waveState.currentWave);
+    
+    // Wave start effects
+    this.audioManager?.playSound('ui.wave_start');
+    this.vfxManager?.flash('wave_complete'); // Use existing golden flash
+    this.vfxManager?.shakeScreen('pickup_collect'); // Light shake
+    
+    // Create wave start particle effect at screen center
+    if (this.particleSystem) {
+      const centerPos = new THREE.Vector3(0, 0, 0);
+      this.particleSystem.emit('fireworks', centerPos);
+      
+      // Additional sparkle effects around the edges
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        const radius = 200;
+        const sparklePos = new THREE.Vector3(
+          Math.cos(angle) * radius,
+          Math.sin(angle) * radius,
+          0
+        );
+        setTimeout(() => {
+          this.particleSystem?.emit('sparkle', sparklePos);
+        }, i * 200);
+      }
+    }
+    
     this.spawnWave(waveConfig);
     
     this.waveState.waveActive = true;
@@ -126,6 +170,45 @@ export class WaveSystem {
     this.waveState.waveActive = false;
     this.waveState.waveComplete = true;
     
+    // Wave complete effects
+    this.audioManager?.playSound('ui.wave_complete');
+    
+    if (this.waveState.perfectWave) {
+      // Perfect wave - extra celebration
+      this.vfxManager?.flash('wave_complete'); // Golden flash
+      this.vfxManager?.shakeScreen('medium_explosion');
+      
+      // Perfect wave fireworks display
+      if (this.particleSystem) {
+        const centerPos = new THREE.Vector3(0, 0, 0);
+        this.particleSystem.emit('fireworks', centerPos);
+        
+        // Multiple fireworks bursts
+        for (let i = 0; i < 8; i++) {
+          setTimeout(() => {
+            const angle = (i / 8) * Math.PI * 2;
+            const radius = 150 + Math.random() * 100;
+            const burstPos = new THREE.Vector3(
+              Math.cos(angle) * radius,
+              Math.sin(angle) * radius,
+              0
+            );
+            this.particleSystem?.emit('fireworks', burstPos);
+          }, i * 300);
+        }
+      }
+    } else {
+      // Normal wave complete
+      this.vfxManager?.flash('powerup_blue'); // Blue flash
+      this.vfxManager?.shakeScreen('small_explosion');
+      
+      // Single celebration burst
+      if (this.particleSystem) {
+        const centerPos = new THREE.Vector3(0, 0, 0);
+        this.particleSystem.emit('explosion_large', centerPos);
+      }
+    }
+    
     this.onWaveComplete?.(this.waveState.currentWave, this.waveState.perfectWave);
     this.onWaveChange?.(this.waveState);
   }
@@ -138,6 +221,25 @@ export class WaveSystem {
     
     this.waveState.currentWave++;
     this.waveState.waveComplete = false;
+    
+    // Create wave transition particle effect
+    if (this.particleSystem) {
+      // Swirling particle transition
+      
+      // Create expanding ring of particles
+      for (let i = 0; i < 32; i++) {
+        setTimeout(() => {
+          const angle = (i / 32) * Math.PI * 2;
+          const radius = 50;
+          const particlePos = new THREE.Vector3(
+            Math.cos(angle) * radius,
+            Math.sin(angle) * radius,
+            0
+          );
+          this.particleSystem?.emit('sparkle', particlePos);
+        }, i * 50);
+      }
+    }
     
     // Auto-start next wave after brief delay
     setTimeout(() => {
@@ -339,6 +441,22 @@ export class WaveSystem {
   }
   
   /**
+   * Set audio and VFX systems
+   * @param audioManager Audio manager instance
+   * @param particleSystem Particle system instance  
+   * @param vfxManager VFX manager instance
+   */
+  public setSystems(
+    audioManager?: AudioManager,
+    particleSystem?: ParticleSystem,
+    vfxManager?: VFXManager
+  ): void {
+    this.audioManager = audioManager;
+    this.particleSystem = particleSystem;
+    this.vfxManager = vfxManager;
+  }
+  
+  /**
    * Get debug information
    */
   public getDebugInfo(): any {
@@ -346,6 +464,11 @@ export class WaveSystem {
       waveState: this.waveState,
       waveConfig: this.generateWaveConfig(this.waveState.currentWave),
       progress: this.getWaveProgress(),
+      systems: {
+        hasAudio: !!this.audioManager,
+        hasParticles: !!this.particleSystem,
+        hasVFX: !!this.vfxManager
+      },
       constants: {
         baseAsteroids: WaveSystem.BASE_ASTEROIDS,
         asteroidsPerWave: WaveSystem.ASTEROIDS_PER_WAVE,

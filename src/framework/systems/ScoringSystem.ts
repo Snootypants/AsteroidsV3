@@ -1,5 +1,7 @@
 import { BaseEntity } from '../entities/BaseEntity';
 import { Asteroid } from '../entities/Asteroid';
+import { ParticleSystem } from './ParticleSystem';
+import * as THREE from 'three';
 
 export interface ScoreEvent {
   points: number;
@@ -32,6 +34,9 @@ export class ScoringSystem {
     maxTimer: 3.0 // 3 seconds to maintain combo
   };
   
+  // Optional particle system for visual score popups
+  private particleSystem?: ParticleSystem;
+  
   // Score values from vanilla implementation
   private static readonly SCORE_VALUES = {
     asteroid: {
@@ -56,7 +61,8 @@ export class ScoringSystem {
   private onHighScore?: (newHighScore: number) => void;
   private onScoreEvent?: (event: ScoreEvent) => void;
   
-  constructor() {
+  constructor(particleSystem?: ParticleSystem) {
+    this.particleSystem = particleSystem;
     this.loadHighScore();
   }
   
@@ -161,6 +167,9 @@ export class ScoringSystem {
         size
       };
       this.onScoreEvent?.(scoreEvent);
+      
+      // Create visual score popup particle
+      this.createScorePopup(finalPoints, position, this.combo.multiplier, reason);
     }
   }
   
@@ -294,6 +303,85 @@ export class ScoringSystem {
   }
   
   /**
+   * Create visual score popup particle effect
+   * @param points Points awarded
+   * @param position Position for popup
+   * @param multiplier Current combo multiplier
+   * @param reason Reason for scoring
+   */
+  private createScorePopup(
+    points: number,
+    position: { x: number; y: number },
+    multiplier: number,
+    _reason: ScoreEvent['reason']
+  ): void {
+    if (!this.particleSystem) return;
+    
+    // Create a text-like particle effect for score display
+    const particlePosition = new THREE.Vector3(position.x, position.y, 0);
+    
+    // Different colors based on score reason - currently unused in basic sparkle effect
+    // TODO: Implement custom particle colors when emitCustom is available
+    /*
+    let color: THREE.Color;
+    switch (reason) {
+      case 'enemy':
+        color = new THREE.Color(1, 0.3, 0.3); // Red for enemies
+        break;
+      case 'bonus':
+        color = new THREE.Color(1, 1, 0.3); // Yellow for bonuses
+        break;
+      default: // asteroid
+        color = new THREE.Color(0.3, 1, 0.3); // Green for asteroids
+        break;
+    }
+    */
+    
+    // Create score popup effect using emit with custom configuration
+    // For now, use basic sparkle effect as emitCustom may not be implemented
+    this.particleSystem.emit('sparkle', particlePosition);
+    
+    // TODO: Implement custom particle emission for score popups
+    /*
+    this.particleSystem.emitCustom({
+      count: 8 + Math.floor(multiplier * 2),
+      position: particlePosition,
+      positionSpread: new THREE.Vector3(8, 8, 0),
+      velocity: new THREE.Vector3(0, 20, 0),
+      velocitySpread: new THREE.Vector3(15, 10, 0),
+      acceleration: new THREE.Vector3(0, 5, 0),
+      color: color,
+      colorSpread: new THREE.Vector3(0.2, 0.2, 0.2),
+      size: 1.5 + multiplier * 0.3,
+      sizeSpread: 0.5,
+      lifetime: 2.0 + multiplier * 0.2,
+      lifetimeSpread: 0.5,
+      opacity: 1.0,
+      opacitySpread: 0.2,
+      blending: THREE.AdditiveBlending
+    });
+    */
+    
+    // Additional sparkle effect for high multipliers
+    if (multiplier >= 4) {
+      this.particleSystem.emit('sparkle', particlePosition);
+    }
+    
+    // Special effect for very high scores
+    if (points >= 500) {
+      this.particleSystem.emit('fireworks', particlePosition);
+    }
+  }
+  
+  /**
+   * Set particle system for score popups
+   * @param particleSystem Particle system instance
+   */
+  public setParticleSystem(particleSystem: ParticleSystem): void {
+    this.particleSystem = particleSystem;
+  }
+  
+  /**
    * Get debug information
    */
   public getDebugInfo(): any {
@@ -301,7 +389,8 @@ export class ScoringSystem {
       score: this.score,
       highScore: this.highScore,
       combo: this.combo,
-      scoreValues: ScoringSystem.SCORE_VALUES
+      scoreValues: ScoringSystem.SCORE_VALUES,
+      hasParticleSystem: !!this.particleSystem
     };
   }
 }
