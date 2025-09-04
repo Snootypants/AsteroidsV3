@@ -44,24 +44,38 @@ export class Ship extends BaseEntity {
   }
 
   private createShipMesh(group: THREE.Group): void {
-    // Load ship texture
-    const loader = new THREE.TextureLoader();
-    const shipTexture = loader.load('/src/assets/ship/ship.png');
-
-    // Create ship material
+    // Create ship material with fallback
     if (!Ship.shipMaterial) {
       Ship.shipMaterial = new THREE.MeshBasicMaterial({
-        map: shipTexture,
+        color: 0x4a90e2,
         transparent: true,
-        alphaTest: 0.1
       });
+      
+      // Try to load ship texture asynchronously
+      const loader = new THREE.TextureLoader();
+      loader.load(
+        '/src/assets/ship/ship.png',
+        (texture) => {
+          // Success callback
+          Ship.shipMaterial!.map = texture;
+          Ship.shipMaterial!.color.setHex(0xffffff); // Reset color to white when texture loads
+          Ship.shipMaterial!.needsUpdate = true;
+          console.log('[Ship] Texture loaded successfully');
+        },
+        undefined,
+        (error) => {
+          // Error callback - keep using colored material
+          console.warn('[Ship] Failed to load texture, using colored fallback:', error);
+        }
+      );
     }
 
-    // Create ship geometry (plane with texture)
+    // Create ship geometry (plane for texture or triangle for fallback)
     const geometry = new THREE.PlaneGeometry(3, 3);
     this.shipMesh = new THREE.Mesh(geometry, Ship.shipMaterial);
     
     group.add(this.shipMesh);
+    console.log('[Ship] Ship mesh created');
   }
 
   private createShieldMesh(group: THREE.Group): void {

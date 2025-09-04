@@ -20,7 +20,6 @@ export const EntitySystemTest: React.FC = () => {
   const threeScene = useThreeScene();
   const [entityManager, setEntityManager] = useState<EntityManager | null>(null);
   const [ship, setShip] = useState<Ship | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   
   // Input state
   const keysPressed = useRef<Set<string>>(new Set());
@@ -29,7 +28,9 @@ export const EntitySystemTest: React.FC = () => {
   // Initialize entity manager when scene is ready
   useEffect(() => {
     if (threeScene.sceneRefs.current?.scene && !entityManager) {
+      console.log('[EntitySystemTest] Initializing EntityManager...');
       const em = new EntityManager(threeScene.sceneRefs.current.scene);
+      console.log('[EntitySystemTest] EntityManager created:', em);
       setEntityManager(em);
     }
   }, [threeScene.sceneRefs, entityManager]);
@@ -78,8 +79,8 @@ export const EntitySystemTest: React.FC = () => {
     };
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
+      if (threeScene.mountRef.current) {
+        const rect = threeScene.mountRef.current.getBoundingClientRect();
         mousePos.current.x = event.clientX - rect.left;
         mousePos.current.y = event.clientY - rect.top;
       }
@@ -96,22 +97,22 @@ export const EntitySystemTest: React.FC = () => {
     };
   }, []);
 
-  // Setup renderer when container is ready
-  useEffect(() => {
-    const sceneRefs = threeScene.sceneRefs.current;
-    if (containerRef.current && sceneRefs?.renderer && !containerRef.current.contains(sceneRefs.renderer.domElement)) {
-      containerRef.current.appendChild(sceneRefs.renderer.domElement);
-    }
-  }, [threeScene.sceneRefs]);
+  // The renderer is already handled by useThreeScene hook via mountRef
+  // No need to manually append it again
 
   // Spawn initial entities
   const handleSpawnShip = () => {
     if (entityManager) {
+      console.log('[EntitySystemTest] Spawning ship...');
       const newShip = entityManager.spawnShip(0, 0);
+      console.log('[EntitySystemTest] Ship spawned:', newShip);
       setShip(newShip);
       
       // Start game loop
+      console.log('[EntitySystemTest] Starting game loop...');
       gameLoopHook.start();
+    } else {
+      console.warn('[EntitySystemTest] Cannot spawn ship - entityManager not ready');
     }
   };
 
@@ -122,10 +123,14 @@ export const EntitySystemTest: React.FC = () => {
       const x = Math.cos(angle) * distance;
       const y = Math.sin(angle) * distance;
       
-      entityManager.spawnAsteroid('large', x, y, 
+      console.log('[EntitySystemTest] Spawning asteroid at:', x, y);
+      const asteroid = entityManager.spawnAsteroid('large', x, y, 
         (Math.random() - 0.5) * 20, 
         (Math.random() - 0.5) * 20
       );
+      console.log('[EntitySystemTest] Asteroid spawned:', asteroid);
+    } else {
+      console.warn('[EntitySystemTest] Cannot spawn asteroid - entityManager not ready');
     }
   };
 
@@ -188,7 +193,7 @@ export const EntitySystemTest: React.FC = () => {
     }}>
       {/* Three.js Container */}
       <div 
-        ref={containerRef}
+        ref={threeScene.mountRef}
         style={{
           position: 'absolute',
           inset: 0,
