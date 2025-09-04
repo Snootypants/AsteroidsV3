@@ -10,9 +10,10 @@ export { useEntityPool } from './hooks/useEntityPool';
 export { GameFramework } from './GameFramework';
 export * from './components';
 
-// Phase 3: Game Systems (to be implemented)
-// export * from './systems';
-// export * from './entities';
+// Phase 3: Game Systems & Entities
+export * from './entities';
+export { EntityManager } from './systems/EntityManager';
+export { GameLoop, useGameLoop } from './game/GameLoop';
 
 // Constants
 export {
@@ -37,3 +38,4 @@ export type { EntityPoolHook } from './hooks/useEntityPool';
 
 // Test Components
 export { UIIntegrationTest } from './test/UIIntegrationTest';
+export { EntitySystemTest } from './test/EntitySystemTest';

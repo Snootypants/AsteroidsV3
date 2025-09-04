@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameState } from '../framework/hooks/useGameState';
 import { useThreeScene } from '../framework/hooks/useThreeScene';
+import { EntitySystemTest, UIIntegrationTest } from '../framework';
 import GameScene from './GameScene';
 
 function App() {
   const gameState = useGameState();
   const threeScene = useThreeScene();
+  const [testMode, setTestMode] = useState<'none' | 'entities' | 'ui'>('none');
 
   // Initialize game data from localStorage on mount
   useEffect(() => {
@@ -20,6 +22,27 @@ function App() {
     console.log('[Asteroids Framework] Three.js scene ready');
     console.log('[Asteroids Framework] Framework boot complete - ready for game implementation');
   }, []);
+
+  // Handle test mode switching
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === '1') setTestMode('entities');
+      if (event.key === '2') setTestMode('ui');
+      if (event.key === '0') setTestMode('none');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Render test components
+  if (testMode === 'entities') {
+    return <EntitySystemTest />;
+  }
+  
+  if (testMode === 'ui') {
+    return <UIIntegrationTest />;
+  }
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -68,12 +91,16 @@ function App() {
           borderRadius: '4px'
         }}>
           <div>Framework Status: Ready ✓</div>
+          <div>Phase 3 Day 1: Entity System Foundation ✓</div>
           <div>Game State: {gameState.state.started ? 'Running' : 'Not Started'}</div>
           <div>Wave: {gameState.state.wave}</div>
           <div>Score: {gameState.state.score}</div>
           <div>Overlay: {gameState.state.currentOverlay || 'None'}</div>
           <div style={{ marginTop: '10px', fontSize: '12px', opacity: 0.7 }}>
-            Press R to start implementing game logic
+            <div><strong>Test Modes:</strong></div>
+            <div>Press 1 for Entity System Test</div>
+            <div>Press 2 for UI Integration Test</div>
+            <div>Press 0 to return to main app</div>
           </div>
         </div>
       </div>
