@@ -1,0 +1,324 @@
+/* HUD component styles - exact from vanilla implementation */
+
+/* Main HUD container */
+.hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  gap: 6px;
+  user-select: none;
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}
+
+/* Currency display */
+.currency-display {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 24px;
+  z-index: 10;
+}
+
+.currency-item {
+  font-size: 32px; /* Doubled from 16px to 32px (100% bigger) */
+  font-weight: bold;
+  opacity: 0.95;
+  text-shadow: 0 0 15px var(--color-accent-glow); /* Enhanced shadow */
+  padding: 8px 12px; /* Added padding for better spacing */
+  background: var(--glass-bg); /* Subtle background */
+  border-radius: 8px; /* Rounded corners */
+  border: 1px solid var(--glass-border); /* Subtle border */
+  backdrop-filter: blur(var(--glass-blur)); /* Glass effect */
+}
+
+.currency-item.gold {
+  color: var(--color-gold);
+}
+
+.currency-item.platinum {
+  color: var(--color-platinum);
+}
+
+.currency-item.adamantium {
+  color: var(--color-adamantium);
+}
+
+.currency-item.salvage {
+  color: var(--color-salvage);
+}
+
+/* Upgrade history stack */
+.upgrade-history {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10001;
+  max-height: 50vh;
+  overflow: hidden;
+}
+
+.upgrade-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(20, 30, 60, 0.85);
+  border: 1px solid rgba(140, 170, 255, 0.25);
+  border-radius: 6px;
+  color: var(--color-primary-light);
+  font-size: 12px;
+  min-width: 140px;
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.upgrade-history-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 6px rgba(140, 170, 255, 0.25));
+}
+
+.upgrade-history-text {
+  font-weight: 500;
+  opacity: 0.95;
+  text-shadow: 0 0 6px rgba(120, 160, 255, 0.3);
+}
+
+/* Minimap */
+.minimap {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, rgba(8, 15, 25, 0.95), rgba(12, 20, 35, 0.95));
+  border: 3px solid rgba(120, 150, 255, 0.5);
+  border-radius: 12px;
+  padding: 12px;
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: 
+    0 0 20px rgba(120, 150, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  z-index: 10001;
+  opacity: 0.5; /* Default to 50% opacity */
+  transition: opacity 0.3s ease; /* Smooth transition */
+}
+
+.minimap.focused {
+  opacity: 1.0; /* 100% when focused */
+}
+
+.minimap-title {
+  text-align: center;
+  font-size: 9px;
+  font-weight: bold;
+  color: #a8c0ff;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 4px rgba(120, 150, 255, 0.4);
+  font-family: 'Courier New', monospace;
+}
+
+.minimap-canvas {
+  display: block;
+  border: 2px solid rgba(120, 150, 255, 0.4);
+  border-radius: 6px;
+  background: rgba(2, 4, 10, 0.9);
+  box-shadow: 
+    inset 0 0 10px rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(120, 150, 255, 0.2);
+}
+
+/* Mouse reticle */
+.reticle {
+  position: fixed;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(180, 220, 255, 0.9);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.reticle.visible {
+  opacity: 1;
+}
+
+/* Frame counter (debug) */
+.frame-counter {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(215, 230, 255, 0.9);
+  text-shadow: 0 0 8px rgba(140, 170, 255, 0.4);
+  background: rgba(10, 15, 30, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(140, 170, 255, 0.2);
+  z-index: 10000;
+}
+
+/* Log toggle button */
+.log-toggle {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 11000; /* Higher than status console */
+  background: rgba(12, 16, 28, 0.7);
+  color: var(--color-primary);
+  border: 1px solid rgba(120, 150, 255, 0.35);
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 80px; /* Push down to avoid currency overlap */
+}
+
+/* Status console */
+.status-console {
+  position: fixed;
+  bottom: 70px; /* Avoid overlapping with error messages */
+  right: 20px;
+  width: min(50vw, 400px); /* Wider console for better error reporting */
+  max-height: 50vh;
+  background: linear-gradient(145deg, rgba(8, 15, 25, 0.95), rgba(12, 20, 35, 0.95));
+  border: 2px solid rgba(120, 150, 255, 0.6);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #cfe0ff;
+  backdrop-filter: blur(2px);
+  overflow: hidden;
+  opacity: 0.0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), max-height 0.3s ease;
+  z-index: 10999; /* Above other UI elements */
+  box-shadow: 0 0 20px rgba(0, 10, 40, 0.5); /* Better visibility */
+}
+
+.status-console.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.status-console.collapsed {
+  max-height: 30px;
+  padding: 4px 14px;
+}
+
+.status-console.collapsed .status-log {
+  display: none;
+}
+
+.status-line {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #a8c0ff;
+  text-shadow: 0 0 8px rgba(140, 170, 255, 0.35);
+  font-size: 14px;
+  padding-right: 50px; /* Make room for buttons */
+}
+
+.status-log {
+  margin: 0;
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #e7f0ff;
+  opacity: 0.9;
+  line-height: 1.4;
+  padding-bottom: 8px;
+  border-top: 1px solid rgba(120, 150, 255, 0.25);
+  padding-top: 8px;
+}
+
+.status-log .error-block {
+  background: rgba(255, 80, 80, 0.15);
+  border-left: 3px solid rgba(255, 100, 100, 0.6);
+  padding: 6px 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+}
+
+.status-log .hint-block {
+  background: rgba(100, 180, 255, 0.15);
+  border-left: 3px solid rgba(100, 180, 255, 0.6);
+  padding: 6px 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+}
+
+/* Status console buttons */
+.status-collapse {
+  position: absolute;
+  top: 4px;
+  right: 28px; /* Left of copy button */
+  width: 20px;
+  height: 20px;
+  background: rgba(120, 150, 255, 0.2);
+  border: 1px solid rgba(120, 150, 255, 0.4);
+  border-radius: 4px;
+  color: #cfe0ff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.status-collapse:hover {
+  background: rgba(120, 150, 255, 0.3);
+}
+
+.status-copy {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  background: rgba(120, 200, 120, 0.2);
+  border: 1px solid rgba(120, 200, 120, 0.4);
+  border-radius: 4px;
+  color: #cfe0ff;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.status-copy:hover {
+  background: rgba(120, 200, 120, 0.3);
+}
+
+/* Copyright notice */
+.copyright {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  font-size: 12px;
+  color: rgba(210, 225, 255, 0.7);
+  text-shadow: 0 0 8px rgba(140, 170, 255, 0.25);
+  user-select: none;
+}

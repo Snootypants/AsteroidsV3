@@ -1,0 +1,166 @@
+/* Base styles ported from vanilla implementation */
+
+/* Global variables for consistent theming */
+:root {
+  --color-primary: #bcd0ff;
+  --color-primary-light: #e8f0ff;
+  --color-primary-glow: rgba(120, 160, 255, 0.35);
+  --color-accent-glow: rgba(140, 170, 255, 0.6);
+  
+  /* Currency colors */
+  --color-salvage: #bde2ff;
+  --color-gold: #ffd77a;
+  --color-platinum: #d8f4ff;
+  --color-adamantium: #ff9a7a;
+  
+  /* Rarity colors */
+  --rarity-common: rgba(150, 170, 255, 0.35);
+  --rarity-uncommon: rgba(120, 255, 180, 0.45);
+  --rarity-rare: rgba(255, 220, 120, 0.55);
+  --rarity-epic: rgba(190, 120, 255, 0.65);
+  --rarity-legendary: rgba(255, 170, 60, 0.75);
+  
+  /* Glass morphism effects */
+  --glass-bg: rgba(8, 10, 20, 0.4);
+  --glass-border: rgba(120, 150, 255, 0.2);
+  --glass-blur: 4px;
+  
+  /* Transition timings */
+  --transition-fast: 0.15s ease-in-out;
+  --transition-normal: 0.25s ease;
+  --transition-overlay: 0.35s ease;
+}
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(1200px 800px at 50% 50%, #04040a, #020208 60%, #000 100%);
+  color: var(--color-primary);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+  user-select: none;
+}
+
+/* Ensure the HTML hidden attribute actually hides elements */
+[hidden] { 
+  display: none !important; 
+}
+
+/* Button reset */
+button {
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Text glow utility */
+.text-glow {
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}
+
+.text-glow-strong {
+  text-shadow: 0 0 15px var(--color-accent-glow);
+}
+
+/* Glass morphism utility */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: 8px;
+}
+
+/* Animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  } 
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes floaty {
+  0% { 
+    transform: translateZ(0) rotateX(var(--rx, 0)) rotateY(var(--ry, 0)) translateY(0);
+  } 
+  50% { 
+    transform: translateZ(0) rotateX(var(--rx, 0)) rotateY(var(--ry, 0)) translateY(-2px);
+  } 
+  100% { 
+    transform: translateZ(0) rotateX(var(--rx, 0)) rotateY(var(--ry, 0)) translateY(0);
+  }
+}
+
+/* Glow animations for rarities */
+@keyframes glowGreen { 
+  from { 
+    box-shadow: 0 0 0 1px rgba(120, 255, 180, 0.25) inset, 0 0 32px rgba(120, 255, 180, 0.12) inset; 
+  } 
+  to { 
+    box-shadow: 0 0 0 1px rgba(120, 255, 180, 0.4) inset, 0 0 40px rgba(120, 255, 180, 0.22) inset; 
+  } 
+}
+
+@keyframes glowBlue  { 
+  from { 
+    box-shadow: 0 0 0 1px rgba(120, 170, 255, 0.35) inset, 0 0 36px rgba(120, 170, 255, 0.16) inset; 
+  } 
+  to { 
+    box-shadow: 0 0 0 1px rgba(120, 170, 255, 0.6) inset, 0 0 46px rgba(120, 170, 255, 0.28) inset; 
+  } 
+}
+
+@keyframes glowPurple  { 
+  from { 
+    box-shadow: 0 0 0 1px rgba(190, 120, 255, 0.45) inset, 0 0 36px rgba(190, 120, 255, 0.20) inset; 
+  } 
+  to { 
+    box-shadow: 0 0 0 1px rgba(190, 120, 255, 0.7) inset, 0 0 46px rgba(190, 120, 255, 0.35) inset; 
+  } 
+}
+
+@keyframes glowGold  { 
+  from { 
+    box-shadow: 0 0 0 1px rgba(255, 220, 120, 0.35) inset, 0 0 36px rgba(255, 220, 120, 0.16) inset; 
+  } 
+  to { 
+    box-shadow: 0 0 0 1px rgba(255, 220, 120, 0.6) inset, 0 0 46px rgba(255, 220, 120, 0.28) inset; 
+  } 
+}
+
+/* Blur effect for game canvas when overlays are open */
+#game-canvas.blurred { 
+  filter: blur(3px) brightness(0.9) saturate(0.95); 
+  transition: filter var(--transition-normal); 
+}

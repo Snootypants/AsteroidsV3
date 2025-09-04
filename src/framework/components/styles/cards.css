@@ -1,0 +1,297 @@
+/* Card component styles - exact from vanilla implementation */
+
+/* Base card container */
+.card {
+  position: relative;
+  perspective: 1000px;
+  animation: popIn 0.25s ease-out;
+}
+
+/* Card inner for 3D transformations */
+.card-inner {
+  position: relative;
+  width: 260px;
+  height: 340px;
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card-inner:hover {
+  transform: translateY(-4px);
+}
+
+/* Card face (front) */
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(12, 18, 35, 0.95), rgba(8, 12, 25, 0.95));
+  border: 2px solid rgba(120, 150, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 10, 30, 0.4);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+/* Rarity-based card styling */
+.card-face.common {
+  border-color: rgba(150, 170, 255, 0.35);
+  background: linear-gradient(145deg, rgba(12, 18, 35, 0.95), rgba(8, 12, 25, 0.95));
+}
+
+.card-face.uncommon {
+  border-color: rgba(120, 255, 180, 0.45);
+  background: linear-gradient(145deg, rgba(8, 25, 15, 0.95), rgba(5, 18, 10, 0.95));
+  animation: glowGreen 2s ease-in-out infinite alternate;
+}
+
+.card-face.rare {
+  border-color: rgba(255, 220, 120, 0.55);
+  background: linear-gradient(145deg, rgba(25, 20, 8, 0.95), rgba(20, 15, 5, 0.95));
+  animation: glowGold 2s ease-in-out infinite alternate;
+}
+
+.card-face.epic {
+  border-color: rgba(190, 120, 255, 0.65);
+  background: linear-gradient(145deg, rgba(20, 8, 25, 0.95), rgba(15, 5, 20, 0.95));
+  animation: glowPurple 2s ease-in-out infinite alternate;
+}
+
+.card-face.legendary {
+  border-color: rgba(255, 170, 60, 0.75);
+  background: linear-gradient(145deg, rgba(25, 15, 8, 0.95), rgba(20, 10, 5, 0.95));
+  animation: glowGold 1.5s ease-in-out infinite alternate;
+  box-shadow: 0 0 30px rgba(255, 170, 60, 0.2);
+}
+
+/* Card header */
+.card-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(120, 150, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.card-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--color-primary-light);
+  text-shadow: 0 0 8px var(--color-primary-glow);
+}
+
+.card-rarity {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.8;
+}
+
+.card-rarity.common { color: rgba(150, 170, 255, 0.8); }
+.card-rarity.uncommon { color: rgba(120, 255, 180, 0.8); }
+.card-rarity.rare { color: rgba(255, 220, 120, 0.8); }
+.card-rarity.epic { color: rgba(190, 120, 255, 0.8); }
+.card-rarity.legendary { color: rgba(255, 170, 60, 0.8); }
+
+/* Card icon */
+.card-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 120px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.card-icon-image {
+  width: 80px;
+  height: 80px;
+  filter: drop-shadow(0 0 12px rgba(120, 150, 255, 0.3));
+  opacity: 0.95;
+}
+
+/* Card description */
+.card-description {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card-text {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-primary);
+  opacity: 0.9;
+}
+
+.card-stats {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.card-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.card-stat-label {
+  color: var(--color-primary);
+  opacity: 0.8;
+}
+
+.card-stat-value {
+  color: var(--color-primary-light);
+  font-weight: bold;
+}
+
+.card-stat-value.positive {
+  color: #90ff90;
+}
+
+.card-stat-value.negative {
+  color: #ff9090;
+}
+
+/* Card footer (for shop cards) */
+.card-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(120, 150, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.card-cost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.card-cost-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.card-cost-item.gold { color: var(--color-gold); }
+.card-cost-item.platinum { color: var(--color-platinum); }
+.card-cost-item.adamantium { color: var(--color-adamantium); }
+.card-cost-item.salvage { color: var(--color-salvage); }
+
+.card-cost-icon {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Card selection/purchase states */
+.card.selected .card-face {
+  border-color: rgba(120, 255, 120, 0.6);
+  box-shadow: 0 0 20px rgba(120, 255, 120, 0.3);
+  transform: scale(1.02);
+}
+
+.card.purchased .card-face {
+  opacity: 0.6;
+  filter: grayscale(0.8);
+  cursor: not-allowed;
+}
+
+.card.banished .card-face {
+  opacity: 0.3;
+  filter: grayscale(1) brightness(0.5);
+  cursor: not-allowed;
+}
+
+.card.cannot-afford .card-face {
+  opacity: 0.7;
+  border-color: rgba(255, 120, 120, 0.4);
+}
+
+/* Card grid layouts */
+.card-grid {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+  justify-content: center;
+  max-width: 90vw;
+  margin: 0 auto;
+}
+
+.card-grid.choices {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  max-width: 900px;
+}
+
+.card-grid.shop {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  max-width: 1200px;
+}
+
+/* Card animations */
+@keyframes cardFlip {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+
+@keyframes cardShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.card.flipping .card-inner {
+  animation: cardFlip 0.6s ease-in-out;
+}
+
+.card.shake .card-inner {
+  animation: cardShake 0.5s ease-in-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .card-inner {
+    width: 240px;
+    height: 320px;
+  }
+  
+  .card-grid {
+    gap: 16px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 800px) {
+  .card-inner {
+    width: 220px;
+    height: 300px;
+  }
+  
+  .card-title {
+    font-size: 16px;
+  }
+  
+  .card-icon-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .card-grid {
+    gap: 12px;
+    padding: 12px;
+  }
+}
