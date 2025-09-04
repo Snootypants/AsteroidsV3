@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asteroids v1 — Three.js</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.158.0/build/three.module.js"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="status" role="status" aria-live="polite" data-show="1" data-collapsed="true">
+      <button id="statusCollapse" title="Expand Console">+</button>
+      <button id="statusCopy" title="Copy Console Output">📋</button>
+      <div id="statusLine">Booting…</div>
+      <pre id="statusLog"></pre>
+    </div>
+    <script>
+      // Lightweight status overlay + global error handlers
+      (function(){
+        const line = document.getElementById('statusLine');
+        const logEl = document.getElementById('statusLog');
+        const api = {
+          set(msg){ line.textContent = msg; },
+          log(msg){ if(!msg) return; const t = new Date().toISOString().split('T')[1].slice(0,12); logEl.textContent += `[${t}] ${msg}\n`; logEl.scrollTop = logEl.scrollHeight; },
+          show(){ document.getElementById('status').dataset.show = '1'; },
+          hide(){ document.getElementById('status').dataset.show = '0'; },
+          toggle(){ const e=document.getElementById('status'); e.dataset.show = e.dataset.show === '1' ? '0':'1'; }
+        };
+        window.__status = api;
+        api.set('Loading modules…');
+        window.addEventListener('error', (e)=>{
+          api.set(`Error: ${e && e.message || 'Unknown error'}`);
+          
+          // Enhanced error reporting
+          let detailedError = '';
+          if (e && e.error) {
+            detailedError = `${e.error.stack || e.message || e}`;
+            
+            // Get error location
+            if (e.filename) {
+              const filenameParts = e.filename.split('/');
+              const filename = filenameParts[filenameParts.length - 1];
+              detailedError = `Error in ${filename} (line ${e.lineno}, col ${e.colno}):\n${detailedError}`;
+            }
+            
+            // Look for missing function references
+            const missingFunctionMatch = detailedError.match(/(\w+) is not defined/);
+            if (missingFunctionMatch && missingFunctionMatch[1]) {
+              detailedError += `\n\nPossible cause: The function "${missingFunctionMatch[1]}" is referenced but not defined yet.`;
+              detailedError += `\nRemember: Functions must be defined before they're called in this codebase.`;
+            }
+            
+            // Look for syntax issues
+            if (detailedError.includes('SyntaxError: Unexpected token')) {
+              detailedError += '\n\nPossible causes:\n- Unmatched brackets or parentheses\n- Missing or extra commas\n- Incomplete function or object definition';
+            }
+          }
+          
+          api.log(detailedError);
+          window.__gameBoot = 'error';
+          
+          // Auto-show status console on error
+          api.show();
+          
+          // Force console to expanded state on critical error
+          const statusEl = document.getElementById('status');
+          const collapseBtn = document.getElementById('statusCollapse');
+          if (statusEl && collapseBtn) {
+            statusEl.setAttribute('data-collapsed', 'false');
+            collapseBtn.textContent = '−';
+            collapseBtn.title = 'Collapse Console';
+          }
+        });
+        window.addEventListener('unhandledrejection', (e)=>{
+          api.set('Unhandled promise rejection');
+          
+          let detailedError = String(e.reason && (e.reason.stack || e.reason.message) || e.reason || e);
+          
+          // Enhance promise rejection errors
+          detailedError += '\n\nPossible causes:\n- Async operation failed\n- Resource loading error\n- Network request issue';
+          
+          api.log(detailedError);
+          window.__gameBoot = 'error';
+          
+          // Auto-show status console on unhandled rejection
+          api.show();
+          
+          // Force console to expanded state on critical error
+          const statusEl = document.getElementById('status');
+          const collapseBtn = document.getElementById('statusCollapse');
+          if (statusEl && collapseBtn) {
+            statusEl.setAttribute('data-collapsed', 'false');
+            collapseBtn.textContent = '−';
+            collapseBtn.title = 'Collapse Console';
+          }
+        });
+        window.addEventListener('keydown', (e)=>{ if(e.key==='F1' || e.key==='`'){ e.preventDefault(); api.toggle(); }});
+        
+        // Console collapse functionality
+        const statusEl = document.getElementById('status');
+        const collapseBtn = document.getElementById('statusCollapse');
+        const copyBtn = document.getElementById('statusCopy');
+        let isCollapsed = true; // Default to collapsed
+        
+        // Set initial state
+        if (collapseBtn) {
+          collapseBtn.textContent = '+';
+          collapseBtn.title = 'Expand Console';
+        }
+        
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', () => {
+            isCollapsed = !isCollapsed;
+            statusEl.setAttribute('data-collapsed', isCollapsed.toString());
+            collapseBtn.textContent = isCollapsed ? '+' : '−';
+            collapseBtn.title = isCollapsed ? 'Expand Console' : 'Collapse Console';
+          });
+        }
+        
+        // Copy console functionality
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async () => {
+            try {
+              const statusLine = line.textContent || '';
+              const statusLog = logEl.textContent || '';
+              const fullText = `Status: ${statusLine}\n\nLog:\n${statusLog}`;
+              
+              await navigator.clipboard.writeText(fullText);
+              
+              // Visual feedback
+              copyBtn.textContent = '✓';
+              copyBtn.style.background = 'rgba(120,255,120,0.4)';
+              setTimeout(() => {
+                copyBtn.textContent = '📋';
+                copyBtn.style.background = 'rgba(120,200,120,0.2)';
+              }, 1000);
+            } catch (err) {
+              console.warn('Failed to copy console output:', err);
+              // Fallback visual feedback
+              copyBtn.textContent = '✗';
+              copyBtn.style.background = 'rgba(255,120,120,0.4)';
+              setTimeout(() => {
+                copyBtn.textContent = '📋';
+                copyBtn.style.background = 'rgba(120,200,120,0.2)';
+              }, 1000);
+            }
+          });
+        }
+
+        // Ensure toggleLog button is created and functional even if toggleLog element doesn't exist yet
+        window.addEventListener('DOMContentLoaded', () => {
+          let toggleLogBtn = document.getElementById('toggleLog');
+          if (!toggleLogBtn) {
+            toggleLogBtn = document.createElement('button');
+            toggleLogBtn.id = 'toggleLog';
+            toggleLogBtn.title = 'Toggle Log';
+            toggleLogBtn.textContent = 'Log';
+            document.body.appendChild(toggleLogBtn);
+          }
+          toggleLogBtn.onclick = () => api.toggle();
+        });
+      })();
+    </script>
+    <div id="hud">
+      <div id="wave">Wave: 1</div>
+    </div>
+    <!-- Currencies HUD -->
+    <div id="currencies">
+      <span class="c salvage" title="Salvage">⛭ <b id="salvageCount">0</b></span>
+      <span class="c gold" title="Gold">◆ <b id="goldCount">0</b></span>
+      <span class="c platinum" title="Platinum">◈ <b id="platCount">0</b></span>
+      <span class="c adam" title="Adamantium">⬢ <b id="adamCount">0</b></span>
+    </div>
+    <!-- Taken upgrades stack -->
+    <div id="taken"></div>
+    <div id="gameover" hidden>
+      <h1>Game Over</h1>
+      <p id="finalScore"></p>
+      <p id="deathReason"></p>
+      <p>Press R to restart</p>
+    </div>
+
+    <div id="choices" hidden>
+      <div class="heading">
+        <h1>UPGRADE</h1>
+        <p>Choose one to power up</p>
+      </div>
+      <div class="cards" id="choiceCards"></div>
+    </div>
+    <!-- Mouse-mode reticle -->
+    <div id="reticle" hidden></div>
+    
+    <!-- Pause screen overlay -->
+    <div id="pause" class="overlay" hidden>
+      <div class="overlay-center">
+        <h1>PAUSED</h1>
+        <div style="display: grid; gap: 24px; max-width: 600px; margin: 0 auto; text-align: left;">
+          
+          <!-- Sound Settings -->
+          <div style="background: rgba(20,30,60,0.8); border: 1px solid rgba(120,150,255,0.3); border-radius: 8px; padding: 16px;">
+            <h3 style="margin: 0 0 12px; color: #e8f0ff;">Sound Settings</h3>
+            <div style="display: grid; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <label for="pauseSfxVol" style="min-width: 60px;">SFX Volume:</label>
+                <input id="pauseSfxVol" type="range" min="0" max="100" value="80" style="flex: 1;" />
+                <span id="sfxVolValue" style="min-width: 40px; font-size: 14px;">80%</span>
+              </div>
+              <button id="pauseSfxMute" type="button" style="padding: 6px 12px; background: rgba(60,20,20,0.8); border: 1px solid rgba(255,120,120,0.4); color: #ffe8e8; border-radius: 4px; cursor: pointer;">Toggle Mute</button>
+            </div>
+          </div>
+          
+          <!-- Controls -->
+          <div style="background: rgba(20,30,60,0.8); border: 1px solid rgba(120,150,255,0.3); border-radius: 8px; padding: 16px;">
+            <h3 style="margin: 0 0 12px; color: #e8f0ff;">Controls</h3>
+            <div style="display: grid; gap: 4px; font-size: 14px; line-height: 1.4;">
+              <div><strong>W/A/S/D or Arrow Keys:</strong> Move ship</div>
+              <div><strong>Space:</strong> Shoot</div>
+              <div><strong>Mouse:</strong> Aim and move (click to enable)</div>
+              <div><strong>Left Click:</strong> Shoot (in mouse mode)</div>
+              <div><strong>Right Click:</strong> Thrust (in mouse mode)</div>
+              <div><strong>Q/A:</strong> Zoom in/out</div>
+              <div><strong>R:</strong> Restart game</div>
+              <div><strong>ESC:</strong> Pause/Unpause</div>
+              <div><strong>F1 or `:</strong> Toggle debug console</div>
+            </div>
+          </div>
+          
+          <!-- Game Info -->
+          <div style="background: rgba(20,30,60,0.8); border: 1px solid rgba(120,150,255,0.3); border-radius: 8px; padding: 16px;">
+            <h3 style="margin: 0 0 12px; color: #e8f0ff;">Game Info</h3>
+            <div style="display: grid; gap: 4px; font-size: 14px; line-height: 1.4;">
+              <div>• Destroy asteroids to earn salvage and ores</div>
+              <div>• Chain kills for combo multipliers</div>
+              <div>• Choose upgrades between waves</div>
+              <div>• Visit the hangar every 3rd wave to spend currency</div>
+              <div>• Boss enemies appear starting wave 3</div>
+            </div>
+          </div>
+          
+        </div>
+        <p style="margin-top: 24px; opacity: 0.8;">Press ESC to resume</p>
+      </div>
+    </div>
+    <div id="frameCounter">0</div>
+    <button id="toggleLog" title="Toggle Log">Log</button>
+    
+    <!-- Minimap -->
+    <div id="minimap">
+      <div id="minimapTitle">TACTICAL DISPLAY</div>
+      <canvas id="minimapCanvas" width="280" height="187"></canvas>
+    </div>
+    <!-- End screen overlay -->
+    <div id="endOverlay" class="overlay" hidden>
+      <img src="assets/gameEnd.png" alt="Game Over" class="overlay-img"/>
+      <div class="overlay-center">
+        <h1>Run Over</h1>
+        <p id="endStats"></p>
+        <p id="endDeathReason" style="color: #ff6b6b; margin: 10px 0; font-size: 1.1em;"></p>
+        <p>Press R to restart</p>
+      </div>
+    </div>
+
+    <!-- Start screen overlay -->
+    <div id="startOverlay" class="overlay show">
+      <img src="assets/start_screen.png" alt="Start Screen" class="overlay-img"/>
+      <div class="overlay-center">
+        <h1>Asteroids Roguelite</h1>
+        <p>Click to start • WASD/Mouse • Space to shoot • R to restart</p>
+      </div>
+    </div>
+
+    <!-- Hangar Shop overlay -->
+    <div id="hangar" class="overlay" hidden>
+      <img src="assets/Hanger.png" alt="Hangar Background" class="overlay-img"/>
+      <!-- Moved title much higher -->
+      <div class="overlay-center" style="position:absolute; top:20%; left:50%; transform:translateX(-50%); text-align:center;">
+        <h1>HANGAR</h1>
+        <p>Spend salvage and ores to upgrade</p>
+      </div>
+      
+      <!-- Cards positioned in middle -->
+      <div id="shopCards" class="choices choices-3d" aria-live="polite" style="position:absolute; top:35%; left:50%; transform:translateX(-50%); z-index:10003;"></div>
+      <div id="choicesMouseLayer" aria-hidden="true"></div>
+      
+      <!-- Currency Display moved much farther down with enhanced styling -->
+      <div id="hangarCurrency" style="position:absolute; top:75%; left:50%; transform:translateX(-50%); z-index:10003; display:flex; gap:32px; font-size:32px; font-weight:bold; text-shadow:0 0 15px rgba(140,170,255,0.7);">
+        <span class="c salvage" title="Salvage" style="color:#bde2ff; padding: 8px 12px; background: rgba(8,10,20,0.5); border-radius: 8px; border: 1px solid rgba(120,150,255,0.3);">⛭ <span id="hangarSalvage">0</span></span>
+        <span class="c gold" title="Gold" style="color:#ffd77a; padding: 8px 12px; background: rgba(8,10,20,0.5); border-radius: 8px; border: 1px solid rgba(255,215,122,0.3);">◆ <span id="hangarGold">0</span></span>
+        <span class="c platinum" title="Platinum" style="color:#d8f4ff; padding: 8px 12px; background: rgba(8,10,20,0.5); border-radius: 8px; border: 1px solid rgba(216,244,255,0.3);">◈ <span id="hangarPlatinum">0</span></span>
+        <span class="c adam" title="Adamantium" style="color:#ff9a7a; padding: 8px 12px; background: rgba(8,10,20,0.5); border-radius: 8px; border: 1px solid rgba(255,154,122,0.3);">⬢ <span id="hangarAdamantium">0</span></span>
+      </div>
+      
+      <!-- Buttons positioned halfway between currency and tip text -->
+      <div class="shop-row" style="position:absolute; bottom:15%; left:50%; transform:translateX(-50%); display:flex; gap:12px; z-index:10004; flex-wrap: wrap; justify-content: center; max-width: 90vw;">
+        <button id="rerollShop" style="padding: 8px 16px; border-radius: 6px; background: rgba(20,30,60,0.8); border: 1px solid rgba(120,150,255,0.4); color: #e8f0ff; font-size: 14px; cursor: pointer;">Reroll (🟦 <span id="rerollCost">15</span>)</button>
+        <button id="banishOne" style="padding: 8px 16px; border-radius: 6px; background: rgba(60,20,20,0.8); border: 1px solid rgba(255,120,120,0.4); color: #ffe8e8; font-size: 14px; cursor: pointer;">Banish 1 (free)</button>
+        <button id="toggleVis" style="padding: 8px 16px; border-radius: 6px; background: rgba(20,40,60,0.8); border: 1px solid rgba(120,180,255,0.4); color: #e8f4ff; font-size: 14px; cursor: pointer;">High-Vis Bullets</button>
+        <button id="nextMission" style="background: linear-gradient(45deg, #4a90e2, #357abd); border: 2px solid #5ba3ff; font-weight: bold; font-size: 16px; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(74,144,226,0.3);">Next Mission</button>
+        <button id="leaveHangar" style="padding: 8px 16px; border-radius: 6px; background: rgba(40,60,40,0.8); border: 1px solid rgba(120,255,120,0.4); color: #e8ffe8; font-size: 14px; cursor: pointer;">Launch</button>
+      </div>
+      <p id="shopInfo" class="sub" style="position:absolute; bottom:6%; left:50%; transform:translateX(-50%);">Epics unlock after Wave 5 or when you own prerequisites.</p>
+    </div>
+    <div id="copyright">© 2025 Snootypants. All rights reserved.</div>
+    <script type="module" src="src/main.js"></script>
+    <script>
+      // Enhanced loader diagnostic: if the module didn't set the flag,
+      // show a message and hint to check DevTools or network.
+      setTimeout(() => {
+        if (window.__gameBoot !== 'running') {
+          console.warn('[Asteroids] Module did not boot. Check DevTools > Console for import errors.');
+          const msg = document.createElement('div');
+          msg.style.position = 'fixed';
+          msg.style.bottom = '10px';
+          msg.style.right = '10px';
+          msg.style.padding = '10px 12px';
+          msg.style.border = '1px solid rgba(255,120,120,0.4)';
+          msg.style.background = 'rgba(30,10,10,0.7)';
+          msg.style.color = '#ffdada';
+          msg.style.zIndex = '99999';
+          msg.textContent = 'Game failed to start. Open DevTools > Console and share the red error lines.';
+          document.body.appendChild(msg);
+          
+          // Enhanced debugging - attempt to provide more info
+          if (window.__status) { 
+            window.__status.set('Module did not boot'); 
+            window.__status.show();
+            
+            // Force console to expanded state
+            const statusEl = document.getElementById('status');
+            const collapseBtn = document.getElementById('statusCollapse');
+            if (statusEl && collapseBtn) {
+              statusEl.setAttribute('data-collapsed', 'false');
+              collapseBtn.textContent = '−';
+              collapseBtn.title = 'Collapse Console';
+            }
+            
+            // Try to detect common issues
+            window.__status.log('Attempting to diagnose the issue:');
+            
+            // Check for network issues with Three.js CDN
+            if (!window.THREE) {
+              window.__status.log('THREE.js library not loaded - possible CDN connectivity issue.');
+              window.__status.log('Try using a local copy of THREE.js instead of CDN.');
+            }
+            
+            // Check for syntax errors
+            window.__status.log('Looking for syntax errors in the browser console...');
+            
+            // Provide guidance
+            window.__status.log('\nTo fix syntax errors:');
+            window.__status.log('1. Look for unbalanced brackets/braces {}');
+            window.__status.log('2. Check for missing function definitions');
+            window.__status.log('3. Ensure all referenced functions are defined before they are called');
+            window.__status.log('4. Verify all variable references are properly defined');
+          }
+        }
+      }, 1000);
+    </script>
+  </body>
+  </html>
