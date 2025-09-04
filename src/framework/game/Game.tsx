@@ -324,13 +324,13 @@ export const Game: React.FC = () => {
   
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
-      {/* Three.js Canvas */}
-      <div className="absolute inset-0 z-0" ref={threeScene.mountRef}>
+      {/* Three.js Canvas Container */}
+      <div className="absolute inset-0" style={{ zIndex: 0 }} ref={threeScene.mountRef}>
         {/* Canvas will be mounted by Three.js hook */}
       </div>
       
       {/* UI Overlays */}
-      <div className="absolute inset-0 z-10">
+      <div className="absolute inset-0" style={{ zIndex: 10 }}>
         {currentState === 'menu' && (
           <MainMenu
             highScore={gameStats.highScore}

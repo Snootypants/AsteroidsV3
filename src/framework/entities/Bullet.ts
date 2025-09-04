@@ -21,8 +21,9 @@ export class Bullet extends BaseEntity {
 
   constructor(x = 0, y = 0, direction = 0, inheritVx = 0, inheritVy = 0) {
     // Calculate velocity from direction and inherited velocity
-    const vx = Math.cos(direction) * BULLET.speed + inheritVx;
-    const vy = Math.sin(direction) * BULLET.speed + inheritVy;
+    // Ship faces "up" by default, so we use sin for X and cos for Y
+    const vx = Math.sin(direction) * BULLET.speed + inheritVx;
+    const vy = Math.cos(direction) * BULLET.speed + inheritVy;
     
     super(x, y, vx, vy, BULLET.r);
     

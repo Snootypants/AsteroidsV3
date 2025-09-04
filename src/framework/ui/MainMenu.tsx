@@ -46,7 +46,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   };
   
   return (
-    <div className={`fixed inset-0 bg-gradient-to-b from-gray-900 via-black to-gray-900 flex flex-col items-center justify-center text-white ${className}`}>
+    <div 
+      className={`fixed inset-0 bg-gradient-to-b from-gray-900 via-black to-gray-900 flex flex-col items-center justify-center text-white ${className}`}
+      style={{
+        // Fallback styles in case Tailwind doesn't load
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'linear-gradient(to bottom, #111827, #000000, #111827)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontFamily: 'monospace'
+      }}
+    >
       {/* Animated Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-white rounded-full animate-pulse" />

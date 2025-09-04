@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BaseEntity } from './BaseEntity';
+import { Bullet } from './Bullet';
 import { PLAYER } from '../constants/gameConstants';
 
 /**
@@ -249,21 +250,22 @@ export class Ship extends BaseEntity {
   /**
    * Shoot a bullet from the ship's position
    */
-  public shoot(): any {
+  public shoot(): Bullet | null {
     if (!this.canShoot()) return null;
     
     this.lastShotTime = performance.now() / 1000;
     
-    // For now, return a basic object - would create actual Bullet entity
-    const angle = this.mesh?.rotation.z || 0;
-    return {
-      position: this.position.clone(),
-      velocity: new THREE.Vector3(
-        Math.cos(angle) * 300,
-        Math.sin(angle) * 300,
-        0
-      )
-    };
+    // Create actual Bullet entity
+    const angle = this.rotation; // Use entity rotation, not mesh rotation
+    const bullet = new Bullet(
+      this.position.x,
+      this.position.y,
+      angle,
+      this.velocity.x * 0.1, // Inherit some ship velocity
+      this.velocity.y * 0.1
+    );
+    
+    return bullet;
   }
 
   /**
