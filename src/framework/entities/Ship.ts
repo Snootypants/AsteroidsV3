@@ -205,6 +205,47 @@ export class Ship extends BaseEntity {
   public setThrusting(thrusting: boolean): void {
     this.thrusting = thrusting;
   }
+  
+  /**
+   * Set rotation input (-1 for left, 1 for right, 0 for no rotation)
+   * @param direction Rotation direction
+   */
+  public setRotating(direction: number): void {
+    // Apply rotation based on direction
+    this.targetRotation += direction * PLAYER.turn;
+  }
+  
+  // Shooting properties
+  private lastShotTime: number = 0;
+  private readonly shotCooldown: number = 0.2; // 200ms between shots
+  
+  /**
+   * Check if ship can shoot
+   */
+  public canShoot(): boolean {
+    const now = performance.now() / 1000;
+    return now - this.lastShotTime >= this.shotCooldown;
+  }
+  
+  /**
+   * Shoot a bullet from the ship's position
+   */
+  public shoot(): any {
+    if (!this.canShoot()) return null;
+    
+    this.lastShotTime = performance.now() / 1000;
+    
+    // For now, return a basic object - would create actual Bullet entity
+    const angle = this.mesh?.rotation.z || 0;
+    return {
+      position: this.position.clone(),
+      velocity: new THREE.Vector3(
+        Math.cos(angle) * 300,
+        Math.sin(angle) * 300,
+        0
+      )
+    };
+  }
 
   /**
    * Make ship invulnerable for specified time

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useGameState } from '../framework/hooks/useGameState';
 import { useThreeScene } from '../framework/hooks/useThreeScene';
 import { EntitySystemTest, UIIntegrationTest } from '../framework';
+import { Game } from '../framework/game/Game';
 import GameScene from './GameScene';
 
 function App() {
   const gameState = useGameState();
   const threeScene = useThreeScene();
-  const [testMode, setTestMode] = useState<'none' | 'entities' | 'ui'>('none');
+  const [testMode, setTestMode] = useState<'none' | 'entities' | 'ui' | 'game'>('none');
 
   // Initialize game data from localStorage on mount
   useEffect(() => {
@@ -28,6 +29,7 @@ function App() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === '1') setTestMode('entities');
       if (event.key === '2') setTestMode('ui');
+      if (event.key === '3') setTestMode('game');
       if (event.key === '0') setTestMode('none');
     };
 
@@ -42,6 +44,10 @@ function App() {
   
   if (testMode === 'ui') {
     return <UIIntegrationTest />;
+  }
+  
+  if (testMode === 'game') {
+    return <Game />;
   }
 
   return (
@@ -100,6 +106,7 @@ function App() {
             <div><strong>Test Modes:</strong></div>
             <div>Press 1 for Entity System Test</div>
             <div>Press 2 for UI Integration Test</div>
+            <div>Press 3 for Complete Game</div>
             <div>Press 0 to return to main app</div>
           </div>
         </div>
