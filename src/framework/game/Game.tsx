@@ -19,7 +19,6 @@ import { HUD, MainMenu, GameOver, PauseMenu } from '../ui';
 export const Game: React.FC = () => {
   // Three.js scene setup
   const threeScene = useThreeScene();
-  const containerRef = useRef<HTMLDivElement>(null);
   
   // Game systems
   const [gameStateManager] = useState(() => new GameStateManager());
@@ -55,8 +54,12 @@ export const Game: React.FC = () => {
   
   // Initialize systems when scene is ready
   useEffect(() => {
-    if (!threeScene.sceneRefs.current?.scene || !threeScene.sceneRefs.current?.camera) return;
+    if (!threeScene.sceneRefs.current?.scene || !threeScene.sceneRefs.current?.camera) {
+      console.log('[Complete Game] Waiting for scene to be ready...');
+      return;
+    }
     
+    console.log('[Complete Game] Initializing systems...');
     const scene = threeScene.sceneRefs.current.scene;
     const camera = threeScene.sceneRefs.current.camera;
     
@@ -69,6 +72,8 @@ export const Game: React.FC = () => {
     const cs = new CollisionSystem(em, am, ps, vm, ds);
     const ss = new ScoringSystem(ps);
     const ws = new WaveSystem(em, am, ps, vm);
+    
+    console.log('[Complete Game] Systems created - EntityManager:', em);
     
     // Set up system connections
     // ps.initialize(); // Remove if method doesn't exist
@@ -84,8 +89,8 @@ export const Game: React.FC = () => {
     
     // Set up game state callbacks
     gameStateManager.onStateChange('any', (from, to) => {
+      console.log(`[Complete Game] Game state changed: ${from} → ${to}`);
       setCurrentState(to);
-      console.log(`Game state changed: ${from} → ${to}`);
     });
     
     gameStateManager.onStatsUpdate((stats) => {
@@ -205,8 +210,8 @@ export const Game: React.FC = () => {
     };
     
     const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
+      if (!threeScene.mountRef.current) return;
+      const rect = threeScene.mountRef.current.getBoundingClientRect();
       mousePos.current = {
         x: e.clientX - rect.left - rect.width / 2,
         y: rect.height / 2 - (e.clientY - rect.top)
@@ -267,17 +272,29 @@ export const Game: React.FC = () => {
   
   // Game state handlers
   const handleStartGame = useCallback(() => {
-    if (!entityManager || !threeScene.sceneRefs.current?.scene) return;
+    console.log('[Complete Game] Starting game...');
+    console.log('[Complete Game] EntityManager:', entityManager);
+    console.log('[Complete Game] Scene:', threeScene.sceneRefs.current?.scene);
+    
+    if (!entityManager || !threeScene.sceneRefs.current?.scene) {
+      console.warn('[Complete Game] Cannot start - missing entityManager or scene');
+      return;
+    }
     
     // Create and spawn ship
+    console.log('[Complete Game] Creating ship...');
     const newShip = new Ship();
     newShip.spawn(threeScene.sceneRefs.current.scene);
     entityManager.addExistingEntity(newShip, 'ships');
     setShip(newShip);
+    console.log('[Complete Game] Ship spawned:', newShip);
     
     // Start first wave
+    console.log('[Complete Game] Starting first wave...');
     waveSystem?.startWave();
     
+    // Set game state to playing
+    console.log('[Complete Game] Setting state to playing...');
     gameStateManager.setState('playing');
   }, [entityManager, threeScene.sceneRefs, waveSystem, gameStateManager]);
   
@@ -306,53 +323,55 @@ export const Game: React.FC = () => {
   }, [gameStateManager]);
   
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-black">
+    <div className="relative w-full h-full overflow-hidden bg-black">
       {/* Three.js Canvas */}
-      <div className="absolute inset-0" ref={threeScene.mountRef}>
+      <div className="absolute inset-0 z-0" ref={threeScene.mountRef}>
         {/* Canvas will be mounted by Three.js hook */}
       </div>
       
       {/* UI Overlays */}
-      {currentState === 'menu' && (
-        <MainMenu
-          highScore={gameStats.highScore}
-          settings={gameSettings}
-          onStartGame={handleStartGame}
-          onShowHighScores={() => console.log('Show high scores')}
-          onShowSettings={() => console.log('Show settings')}
-          onSettingsChange={handleSettingsChange}
-        />
-      )}
-      
-      {(currentState === 'playing' || currentState === 'paused') && (
-        <HUD
-          stats={gameStats}
-          showFPS={gameSettings.showFPS}
-          fps={fps}
-          waveProgress={waveSystem?.getWaveProgress() || 0}
-          isPaused={currentState === 'paused'}
-        />
-      )}
-      
-      {currentState === 'paused' && (
-        <PauseMenu
-          stats={gameStats}
-          settings={gameSettings}
-          onResume={() => gameStateManager.setState('playing')}
-          onRestart={handleRestart}
-          onMainMenu={handleMainMenu}
-          onSettingsChange={handleSettingsChange}
-        />
-      )}
-      
-      {currentState === 'gameOver' && (
-        <GameOver
-          stats={gameStats}
-          isNewHighScore={isNewHighScore}
-          onRestart={handleRestart}
-          onMainMenu={handleMainMenu}
-        />
-      )}
+      <div className="absolute inset-0 z-10">
+        {currentState === 'menu' && (
+          <MainMenu
+            highScore={gameStats.highScore}
+            settings={gameSettings}
+            onStartGame={handleStartGame}
+            onShowHighScores={() => console.log('Show high scores')}
+            onShowSettings={() => console.log('Show settings')}
+            onSettingsChange={handleSettingsChange}
+          />
+        )}
+        
+        {(currentState === 'playing' || currentState === 'paused') && (
+          <HUD
+            stats={gameStats}
+            showFPS={gameSettings.showFPS}
+            fps={fps}
+            waveProgress={waveSystem?.getWaveProgress() || 0}
+            isPaused={currentState === 'paused'}
+          />
+        )}
+        
+        {currentState === 'paused' && (
+          <PauseMenu
+            stats={gameStats}
+            settings={gameSettings}
+            onResume={() => gameStateManager.setState('playing')}
+            onRestart={handleRestart}
+            onMainMenu={handleMainMenu}
+            onSettingsChange={handleSettingsChange}
+          />
+        )}
+        
+        {currentState === 'gameOver' && (
+          <GameOver
+            stats={gameStats}
+            isNewHighScore={isNewHighScore}
+            onRestart={handleRestart}
+            onMainMenu={handleMainMenu}
+          />
+        )}
+      </div>
     </div>
   );
 };
