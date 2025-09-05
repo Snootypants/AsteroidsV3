@@ -1,5 +1,7 @@
 import React from 'react';
 import { GameStats } from '../systems/GameStateManager';
+import { EntityManager } from '../systems/EntityManager';
+import { Minimap } from '../components/hud/Minimap';
 
 export interface HUDProps {
   stats: GameStats;
@@ -8,6 +10,7 @@ export interface HUDProps {
   waveProgress?: number; // 0-1 percentage of wave completion
   isPaused?: boolean;
   className?: string;
+  entityManager?: EntityManager;
 }
 
 /**
@@ -20,7 +23,8 @@ export const HUD: React.FC<HUDProps> = ({
   fps = 0,
   waveProgress = 0,
   isPaused = false,
-  className = ''
+  className = '',
+  entityManager
 }) => {
   const formatScore = (score: number): string => {
     return score.toLocaleString();
@@ -172,6 +176,26 @@ export const HUD: React.FC<HUDProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Minimap - Bottom Center */}
+      {entityManager && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+          <Minimap 
+            gameState={{
+              player: {
+                position: { x: 0, y: 0 }, // Will be updated from actual ship position
+                rotation: 0
+              },
+              lives: stats.lives,
+              ui: {
+                minimapFocused: false
+              }
+            }}
+            onUpdateGameState={() => {}}
+            entityManager={entityManager}
+          />
+        </div>
+      )}
       
       {/* Power-up Status (if active) */}
       {/* This would be expanded based on active power-ups */}

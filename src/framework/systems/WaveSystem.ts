@@ -102,6 +102,7 @@ export class WaveSystem {
     if (this.waveState.waveActive) return;
     
     const waveConfig = this.generateWaveConfig(this.waveState.currentWave);
+    console.log('[WaveSystem] Starting wave', this.waveState.currentWave, 'with config:', waveConfig);
     
     // Wave start effects
     this.audioManager?.playSound('ui.wave_start');
@@ -312,13 +313,16 @@ export class WaveSystem {
    * @param config Wave configuration
    */
   private spawnWave(config: WaveConfig): void {
+    console.log('[WaveSystem] Spawning wave with', config.asteroidSizes.length, 'asteroids');
+    
     // Spawn asteroids
     for (let i = 0; i < config.asteroidSizes.length; i++) {
       const size = config.asteroidSizes[i];
       const position = this.getSpawnPosition();
       const velocity = PhysicsSystem.getRandomVelocity(10 * config.speedMultiplier, 30 * config.speedMultiplier);
       
-      this.entityManager.spawnAsteroid(size, position.x, position.y, velocity.x, velocity.y);
+      const asteroid = this.entityManager.spawnAsteroid(size, position.x, position.y, velocity.x, velocity.y);
+      console.log('[WaveSystem] Spawned asteroid', i + 1, 'of', config.asteroidSizes.length, '- size:', size, 'at:', position);
     }
     
     // Schedule enemy spawning if needed

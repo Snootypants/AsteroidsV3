@@ -210,9 +210,11 @@ export const useThreeScene = (): ThreeSceneHook => {
     };
     
     mountRef.current.appendChild(renderer.domElement);
+    console.log('[Framework] Renderer attached to DOM');
     
     // Create initial starfield
     makeStarsInternal();
+    console.log('[Framework] Starfield created');
     
     console.log('[Framework] Three.js scene initialized');
     
@@ -481,6 +483,11 @@ export const useThreeScene = (): ThreeSceneHook => {
   }, []);
   
   const update = useCallback((deltaTime: number, _gameState: { paused: boolean; gameOver: boolean }) => {
+    if (sceneRefs.current?.composer === undefined) {
+      console.warn('[Framework] Composer not ready; skipping render');
+      return;
+    }
+    
     updateWarpEffect(deltaTime);
     updateStarfieldDrift(deltaTime); // Always update drift for ambient feel
     updateCameraShake(deltaTime);

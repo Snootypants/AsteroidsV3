@@ -17,6 +17,9 @@ export abstract class BaseEntity {
   // Three.js mesh reference
   public mesh?: THREE.Object3D;
 
+  // Static throttling for wrap logs (once per entity type per 2 seconds)
+  private static wrapLogThrottle = new Map<string, number>();
+
   constructor(
     x = 0,
     y = 0,
@@ -66,19 +69,36 @@ export abstract class BaseEntity {
   protected wrapPosition(): void {
     const halfWidth = WORLD.width / 2;
     const halfHeight = WORLD.height / 2;
+    let wrapped = false;
 
     // Wrap X coordinate
     if (this.position.x > halfWidth) {
       this.position.x = -halfWidth;
+      wrapped = true;
     } else if (this.position.x < -halfWidth) {
       this.position.x = halfWidth;
+      wrapped = true;
     }
 
     // Wrap Y coordinate
     if (this.position.y > halfHeight) {
       this.position.y = -halfHeight;
+      wrapped = true;
     } else if (this.position.y < -halfHeight) {
       this.position.y = halfHeight;
+      wrapped = true;
+    }
+
+    // Throttled logging (once per entity type per 2 seconds)
+    if (wrapped) {
+      const entityType = this.constructor.name;
+      const now = performance.now();
+      const lastLog = BaseEntity.wrapLogThrottle.get(entityType) || 0;
+      
+      if (now - lastLog >= 2000) { // 2 seconds throttle
+        console.log(`[${entityType}] World wrap at (${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)})`);
+        BaseEntity.wrapLogThrottle.set(entityType, now);
+      }
     }
   }
 

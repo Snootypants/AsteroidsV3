@@ -27,13 +27,28 @@ export const EntitySystemTest: React.FC = () => {
 
   // Initialize entity manager when scene is ready
   useEffect(() => {
-    if (threeScene.sceneRefs.current?.scene && !entityManager) {
+    if (!threeScene.mountRef.current) {
+      console.error('[EntitySystemTest] Mount ref not available');
+      return;
+    }
+    
+    if (!threeScene.sceneRefs.current?.scene) {
+      console.error('[EntitySystemTest] Scene not available');
+      return;
+    }
+    
+    if (!threeScene.sceneRefs.current?.camera) {
+      console.error('[EntitySystemTest] Camera not available');
+      return;
+    }
+    
+    if (!entityManager) {
       console.log('[EntitySystemTest] Initializing EntityManager...');
       const em = new EntityManager(threeScene.sceneRefs.current.scene);
       console.log('[EntitySystemTest] EntityManager created:', em);
       setEntityManager(em);
     }
-  }, [threeScene.sceneRefs, entityManager]);
+  }, [threeScene.sceneRefs, threeScene.mountRef, entityManager]);
 
   // Initialize game loop
   const gameLoopHook = useGameLoop(

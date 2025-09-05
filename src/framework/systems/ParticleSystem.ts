@@ -69,6 +69,13 @@ export class ParticleSystem {
     trail: 80
   };
   
+  // Aliases for backwards compatibility and convenience
+  private static readonly ALIASES: Record<string, string> = {
+    muzzle_flash: 'ship_muzzle_flash',
+    explosion_large: 'asteroid_explosion_large',
+    explosion_medium: 'asteroid_explosion_medium',
+  };
+  
   // Predefined emitter configurations
   private static readonly EMITTER_CONFIGS: Record<string, ParticleEmitterConfig> = {
     asteroid_explosion_large: {
@@ -202,6 +209,63 @@ export class ParticleSystem {
       gravity: new THREE.Vector3(0, -10, 0),
       drag: 0.99,
       burst: true
+    },
+    
+    sparkle: {
+      type: 'sparkle',
+      count: 14,
+      position: new THREE.Vector3(),
+      velocity: {
+        min: new THREE.Vector3(-20, -20, 0),
+        max: new THREE.Vector3(20, 20, 0)
+      },
+      size: { min: 0.8, max: 2.8 },
+      life: { min: 0.4, max: 0.9 },
+      color: {
+        start: new THREE.Color(0.8, 1, 1),
+        end: new THREE.Color(0.4, 0.8, 1)
+      },
+      gravity: new THREE.Vector3(0, 0, 0),
+      drag: 0.97,
+      burst: true
+    },
+    
+    sparks: {
+      type: 'sparkle',
+      count: 10,
+      position: new THREE.Vector3(),
+      velocity: {
+        min: new THREE.Vector3(-30, -10, 0),
+        max: new THREE.Vector3(30, 40, 0)
+      },
+      size: { min: 0.6, max: 2.2 },
+      life: { min: 0.2, max: 0.6 },
+      color: {
+        start: new THREE.Color(1, 0.9, 0.6),
+        end: new THREE.Color(1, 0.6, 0.2)
+      },
+      gravity: new THREE.Vector3(0, -10, 0),
+      drag: 0.95,
+      burst: true
+    },
+    
+    fireworks: {
+      type: 'explosion',
+      count: 18,
+      position: new THREE.Vector3(),
+      velocity: {
+        min: new THREE.Vector3(-60, -60, 0),
+        max: new THREE.Vector3(60, 60, 0)
+      },
+      size: { min: 2, max: 5 },
+      life: { min: 0.8, max: 1.8 },
+      color: {
+        start: new THREE.Color(1, 0.9, 0.6),
+        end: new THREE.Color(0.6, 0.8, 1)
+      },
+      gravity: new THREE.Vector3(0, -5, 0),
+      drag: 0.98,
+      burst: true
     }
   };
   
@@ -294,7 +358,8 @@ export class ParticleSystem {
    * Emit particles using a predefined configuration
    */
   public emit(configName: string, position: THREE.Vector3, direction?: THREE.Vector3): void {
-    const config = ParticleSystem.EMITTER_CONFIGS[configName];
+    const key = ParticleSystem.ALIASES[configName] ?? configName;
+    const config = ParticleSystem.EMITTER_CONFIGS[key];
     if (!config) {
       console.warn(`Unknown particle config: ${configName}`);
       return;

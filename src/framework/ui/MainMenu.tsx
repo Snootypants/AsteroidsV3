@@ -4,6 +4,7 @@ import { GameSettings } from '../systems/GameStateManager';
 export interface MainMenuProps {
   highScore: number;
   settings: GameSettings;
+  systemsReady?: boolean;
   onStartGame: () => void;
   onShowHighScores: () => void;
   onShowSettings: () => void;
@@ -18,6 +19,7 @@ export interface MainMenuProps {
 export const MainMenu: React.FC<MainMenuProps> = ({
   highScore,
   settings,
+  systemsReady = true,
   onStartGame,
   onShowHighScores,
   onShowSettings,
@@ -98,10 +100,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         {/* Main Menu Buttons */}
         <div className="space-y-4">
           <button
-            onClick={onStartGame}
-            className="w-64 px-8 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xl rounded-lg transform transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/50 font-mono uppercase tracking-wider"
+            onClick={systemsReady ? onStartGame : undefined}
+            disabled={!systemsReady}
+            className={`w-64 px-8 py-4 font-bold text-xl rounded-lg transform transition-all duration-200 font-mono uppercase tracking-wider ${
+              systemsReady 
+                ? 'bg-cyan-600 hover:bg-cyan-500 text-white hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/50 cursor-pointer' 
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+            }`}
           >
-            Start Game
+            {systemsReady ? 'Start Game' : 'Initializing...'}
           </button>
           
           <button

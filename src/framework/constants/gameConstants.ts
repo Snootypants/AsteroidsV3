@@ -65,6 +65,7 @@ export const EPIC_REROLL_THRESHOLD = 4;
 
 // Entity pool sizes (matching vanilla)
 export const POOL_SIZES = {
+  ships: 5,
   bullets: 200,
   particles: 350,
   debris: 260,
@@ -108,6 +109,8 @@ export const POSTPROCESSING = {
 } as const;
 
 // Renderer settings
+// NOTE: These values are informative only. The actual renderer configuration 
+// is handled in useThreeScene.ts which is the authoritative source.
 export const RENDERER_SETTINGS = {
   antialias: false,
   alpha: true,

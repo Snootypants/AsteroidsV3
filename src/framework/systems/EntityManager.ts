@@ -5,6 +5,7 @@ import { Asteroid, AsteroidSize } from '../entities/Asteroid';
 import { Bullet } from '../entities/Bullet';
 import { Enemy, EnemyType } from '../entities/Enemy';
 import { Pickup, PickupType } from '../entities/Pickup';
+import { POOL_SIZES, BULLET } from '../constants/gameConstants';
 
 export interface EntityCollections {
   ships: Ship[];
@@ -34,14 +35,6 @@ export class EntityManager {
   private enemyPool: Enemy[] = [];
   private pickupPool: Pickup[] = [];
   
-  // Pool sizes
-  private static readonly POOL_SIZES = {
-    ships: 5,        // Few ships needed
-    asteroids: 50,   // Many asteroids across waves
-    bullets: 100,    // Many bullets can be on screen
-    enemies: 15,     // Moderate number of enemies
-    pickups: 25      // Various pickups scattered around
-  };
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -61,33 +54,33 @@ export class EntityManager {
 
   private initializePools(): void {
     // Create ship pool
-    for (let i = 0; i < EntityManager.POOL_SIZES.ships; i++) {
+    for (let i = 0; i < POOL_SIZES.ships; i++) {
       const ship = new Ship();
       this.shipPool.push(ship);
     }
     
     // Create asteroid pool with various sizes
-    for (let i = 0; i < EntityManager.POOL_SIZES.asteroids; i++) {
+    for (let i = 0; i < POOL_SIZES.asteroids; i++) {
       const size: AsteroidSize = i % 3 === 0 ? 'large' : i % 3 === 1 ? 'medium' : 'small';
       const asteroid = new Asteroid(size);
       this.asteroidPool.push(asteroid);
     }
     
     // Create bullet pool
-    for (let i = 0; i < EntityManager.POOL_SIZES.bullets; i++) {
+    for (let i = 0; i < POOL_SIZES.bullets; i++) {
       const bullet = new Bullet();
       this.bulletPool.push(bullet);
     }
     
     // Create enemy pool
-    for (let i = 0; i < EntityManager.POOL_SIZES.enemies; i++) {
+    for (let i = 0; i < POOL_SIZES.enemies; i++) {
       const enemyType: EnemyType = i % 3 === 0 ? 'hunter' : i % 3 === 1 ? 'sniper' : 'kamikaze';
       const enemy = new Enemy(enemyType);
       this.enemyPool.push(enemy);
     }
     
     // Create pickup pool
-    for (let i = 0; i < EntityManager.POOL_SIZES.pickups; i++) {
+    for (let i = 0; i < POOL_SIZES.pickups; i++) {
       const pickupType: PickupType = i % 6 === 0 ? 'salvage' : 
                                     i % 6 === 1 ? 'health' : 
                                     i % 6 === 2 ? 'shield' :
@@ -129,14 +122,14 @@ export class EntityManager {
 
   private cleanupInactiveEntities(): void {
     // Remove inactive entities and return them to pools
-    this.cleanupCollection(this.entities.ships, this.shipPool);
-    this.cleanupCollection(this.entities.asteroids, this.asteroidPool);
-    this.cleanupCollection(this.entities.bullets, this.bulletPool);
-    this.cleanupCollection(this.entities.enemies, this.enemyPool);
-    this.cleanupCollection(this.entities.pickups, this.pickupPool);
+    this.cleanupCollection(this.entities.ships, this.shipPool, 'ships');
+    this.cleanupCollection(this.entities.asteroids, this.asteroidPool, 'asteroids');
+    this.cleanupCollection(this.entities.bullets, this.bulletPool, 'bullets');
+    this.cleanupCollection(this.entities.enemies, this.enemyPool, 'enemies');
+    this.cleanupCollection(this.entities.pickups, this.pickupPool, 'pickups');
   }
 
-  private cleanupCollection<T extends BaseEntity>(entities: T[], pool: T[]): void {
+  private cleanupCollection<T extends BaseEntity>(entities: T[], pool: T[], kind: keyof EntityCollections): void {
     for (let i = entities.length - 1; i >= 0; i--) {
       const entity = entities[i];
       if (!entity.active) {
@@ -144,7 +137,7 @@ export class EntityManager {
         entities.splice(i, 1);
         
         // Return to pool if there's space
-        if (pool.length < EntityManager.POOL_SIZES.ships) {
+        if (pool.length < POOL_SIZES[kind]) {
           pool.push(entity);
         }
       }
@@ -224,8 +217,8 @@ export class EntityManager {
     } else {
       bullet.reset(x, y);
       // Set bullet direction and properties
-      bullet.velocity.x = Math.cos(direction) * 70 + inheritVx; // BULLET.speed = 70
-      bullet.velocity.y = Math.sin(direction) * 70 + inheritVy;
+      bullet.velocity.x = Math.cos(direction) * BULLET.speed + inheritVx;
+      bullet.velocity.y = Math.sin(direction) * BULLET.speed + inheritVy;
       bullet.pierce = pierce;
       bullet.ricochet = ricochet;
       bullet.damage = damage;
@@ -345,7 +338,9 @@ export class EntityManager {
     const allEntities: BaseEntity[] = [
       ...this.entities.ships,
       ...this.entities.asteroids,
-      ...this.entities.bullets
+      ...this.entities.bullets,
+      ...this.entities.enemies,
+      ...this.entities.pickups
     ];
     
     return allEntities.filter(entity => entity instanceof type) as T[];

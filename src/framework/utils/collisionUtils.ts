@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 
+// NOTE: This file is currently unused/internal. 
+// It contains collision utilities from the vanilla implementation but is not integrated into the current framework.
+// Consider integration or removal in future refactoring.
+
 // Exact collision detection from vanilla implementation
 
 export const circleHit = (

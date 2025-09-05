@@ -36,6 +36,7 @@ export const Game: React.FC = () => {
   const [gameStats, setGameStats] = useState<GameStats>(gameStateManager.getStats());
   const [gameSettings, setGameSettings] = useState<GameSettings>(gameStateManager.getSettings());
   const [isNewHighScore, setIsNewHighScore] = useState(false);
+  const [systemsReady, setSystemsReady] = useState(false);
   
   // Game entities
   const [ship, setShip] = useState<Ship | null>(null);
@@ -52,6 +53,11 @@ export const Game: React.FC = () => {
   const gameLoopRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   
+  // Log initial state
+  useEffect(() => {
+    console.log('[Complete Game] Initial state:', currentState);
+  }, []);
+
   // Initialize systems when scene is ready
   useEffect(() => {
     if (!threeScene.sceneRefs.current?.scene || !threeScene.sceneRefs.current?.camera) {
@@ -130,6 +136,10 @@ export const Game: React.FC = () => {
       }
     });
     
+    // Systems are now ready
+    setSystemsReady(true);
+    console.log('[Complete Game] Systems ready');
+    
     return () => {
       // Cleanup systems
       ps.dispose();
@@ -138,7 +148,28 @@ export const Game: React.FC = () => {
     };
   }, [threeScene.sceneRefs, gameStateManager, gameStats.perfectWaves]);
   
-  // Game loop
+  // Continuous render loop for starfield and background
+  useEffect(() => {
+    let rafId = 0;
+    let last = performance.now();
+    const renderLoop = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 1 / 30);
+      last = now;
+      const refs = threeScene.sceneRefs.current;
+      if (refs) {
+        threeScene.update(dt, {
+          paused: currentState === 'paused',
+          gameOver: currentState === 'gameOver',
+        });
+        refs.composer?.render(); // ensure visible background
+      }
+      rafId = requestAnimationFrame(renderLoop);
+    };
+    rafId = requestAnimationFrame(renderLoop);
+    return () => cancelAnimationFrame(rafId);
+  }, [threeScene, currentState]);
+  
+  // Game loop (only when playing)
   useEffect(() => {
     if (currentState !== 'playing' || !entityManager) return;
     
@@ -194,6 +225,11 @@ export const Game: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current.add(e.code);
       
+      // Prevent Space from scrolling page
+      if (e.code === 'Space') {
+        e.preventDefault();
+      }
+      
       // Handle pause
       if (e.code === gameSettings.controls.pause) {
         e.preventDefault();
@@ -236,7 +272,25 @@ export const Game: React.FC = () => {
     const isRight = keysPressed.current.has(gameSettings.controls.right);
     
     ship.setThrusting(isForward);
-    ship.setRotating(isLeft ? -1 : isRight ? 1 : 0);
+    
+    // Handle rotation: A/D keys override mouse aiming
+    if (isLeft || isRight) {
+      // Keyboard rotation takes priority
+      ship.setRotating(isLeft ? -1 : isRight ? 1 : 0);
+    } else if (threeScene.mountRef.current && threeScene.sceneRefs.current) {
+      // Mouse aiming when no rotation keys pressed
+      const rect = threeScene.mountRef.current.getBoundingClientRect();
+      const normalizedX = (mousePos.current.x / rect.width) * 2 - 1;
+      const normalizedY = -((mousePos.current.y / rect.height) * 2 - 1);
+      const camera = threeScene.sceneRefs.current.camera;
+      const worldX = normalizedX * (camera.right - camera.left) / 2 + camera.position.x;
+      const worldY = normalizedY * (camera.top - camera.bottom) / 2 + camera.position.y;
+      const dx = worldX - ship.position.x;
+      const dy = worldY - ship.position.y;
+      ship.setTargetRotation(Math.atan2(dx, dy));
+      ship.setRotating(0);
+    }
+    
     ship.update(deltaTime);
     
     // Update thruster sound
@@ -255,6 +309,7 @@ export const Game: React.FC = () => {
       if (bullet && entityManager) {
         entityManager.addExistingEntity(bullet, 'bullets');
         bullet.spawn(threeScene.sceneRefs.current!.scene);
+        console.log('[Complete Game] Bullet spawned:', bullet.position);
         
         // Update stats
         gameStateManager.updateStats({
@@ -273,6 +328,12 @@ export const Game: React.FC = () => {
   // Game state handlers
   const handleStartGame = useCallback(() => {
     console.log('[Complete Game] Starting game...');
+    
+    if (!systemsReady) {
+      console.warn('[Complete Game] Start blocked: systems not ready');
+      return;
+    }
+    
     console.log('[Complete Game] EntityManager:', entityManager);
     console.log('[Complete Game] Scene:', threeScene.sceneRefs.current?.scene);
     
@@ -289,6 +350,10 @@ export const Game: React.FC = () => {
     setShip(newShip);
     console.log('[Complete Game] Ship spawned:', newShip);
     
+    // Set camera to follow ship
+    threeScene.setCameraFollow(newShip.mesh!);
+    console.log('[Complete Game] Camera following ship');
+    
     // Start first wave
     console.log('[Complete Game] Starting first wave...');
     waveSystem?.startWave();
@@ -296,7 +361,7 @@ export const Game: React.FC = () => {
     // Set game state to playing
     console.log('[Complete Game] Setting state to playing...');
     gameStateManager.setState('playing');
-  }, [entityManager, threeScene.sceneRefs, waveSystem, gameStateManager]);
+  }, [systemsReady, entityManager, threeScene.sceneRefs, waveSystem, gameStateManager]);
   
   const handleRestart = useCallback(() => {
     // Reset all systems
@@ -335,6 +400,7 @@ export const Game: React.FC = () => {
           <MainMenu
             highScore={gameStats.highScore}
             settings={gameSettings}
+            systemsReady={systemsReady}
             onStartGame={handleStartGame}
             onShowHighScores={() => console.log('Show high scores')}
             onShowSettings={() => console.log('Show settings')}
@@ -349,6 +415,7 @@ export const Game: React.FC = () => {
             fps={fps}
             waveProgress={waveSystem?.getWaveProgress() || 0}
             isPaused={currentState === 'paused'}
+            entityManager={entityManager}
           />
         )}
         

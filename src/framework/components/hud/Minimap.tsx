@@ -1,15 +1,18 @@
 import React, { useRef, useEffect } from 'react';
 import { GameState } from '../../hooks/useGameState';
 import { WORLD } from '../../constants/gameConstants';
+import { EntityManager } from '../../systems/EntityManager';
 
 interface MinimapProps {
   gameState: GameState;
   onUpdateGameState: (updates: Partial<GameState>) => void;
+  entityManager?: EntityManager;
 }
 
 export const Minimap: React.FC<MinimapProps> = ({
   gameState,
-  onUpdateGameState
+  onUpdateGameState,
+  entityManager
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [focused, setFocused] = React.useState(false);
@@ -37,34 +40,117 @@ export const Minimap: React.FC<MinimapProps> = ({
     ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT);
 
-    // Draw player position (if alive)
-    if (gameState.lives > 0) {
-      const playerX = (gameState.player.position.x + WORLD.width / 2) * scaleX;
-      const playerY = (gameState.player.position.y + WORLD.height / 2) * scaleY;
+    // Draw entities from EntityManager if available
+    if (entityManager) {
+      // Draw ships (bright blue triangles)
+      const ships = entityManager.entities.ships;
+      ships.forEach(ship => {
+        if (ship.active) {
+          const shipX = ((ship.position.x + WORLD.width / 2) / WORLD.width) * MINIMAP_WIDTH;
+          const shipY = ((ship.position.y + WORLD.height / 2) / WORLD.height) * MINIMAP_HEIGHT;
+          
+          ctx.fillStyle = '#4a90e2';
+          ctx.beginPath();
+          ctx.arc(shipX, shipY, 4, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw direction indicator
+          const angle = ship.rotation;
+          const dirLength = 10;
+          const dirX = shipX + Math.cos(angle) * dirLength;
+          const dirY = shipY + Math.sin(angle) * dirLength;
+          
+          ctx.strokeStyle = '#4a90e2';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(shipX, shipY);
+          ctx.lineTo(dirX, dirY);
+          ctx.stroke();
+        }
+      });
       
-      ctx.fillStyle = '#4a90e2';
-      ctx.beginPath();
-      ctx.arc(playerX, playerY, 3, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw asteroids (gray dots)
+      const asteroids = entityManager.entities.asteroids;
+      asteroids.forEach(asteroid => {
+        if (asteroid.active) {
+          const asteroidX = ((asteroid.position.x + WORLD.width / 2) / WORLD.width) * MINIMAP_WIDTH;
+          const asteroidY = ((asteroid.position.y + WORLD.height / 2) / WORLD.height) * MINIMAP_HEIGHT;
+          
+          ctx.fillStyle = '#888888';
+          ctx.beginPath();
+          ctx.arc(asteroidX, asteroidY, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
       
-      // Draw player direction indicator
-      const angle = gameState.player.rotation;
-      const dirLength = 8;
-      const dirX = playerX + Math.cos(angle) * dirLength;
-      const dirY = playerY + Math.sin(angle) * dirLength;
+      // Draw bullets (small yellow dots)
+      const bullets = entityManager.entities.bullets;
+      bullets.forEach(bullet => {
+        if (bullet.active) {
+          const bulletX = ((bullet.position.x + WORLD.width / 2) / WORLD.width) * MINIMAP_WIDTH;
+          const bulletY = ((bullet.position.y + WORLD.height / 2) / WORLD.height) * MINIMAP_HEIGHT;
+          
+          ctx.fillStyle = '#ffff00';
+          ctx.beginPath();
+          ctx.arc(bulletX, bulletY, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
       
-      ctx.strokeStyle = '#4a90e2';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(playerX, playerY);
-      ctx.lineTo(dirX, dirY);
-      ctx.stroke();
+      // Draw enemies (red triangles)
+      const enemies = entityManager.entities.enemies;
+      enemies.forEach(enemy => {
+        if (enemy.active) {
+          const enemyX = ((enemy.position.x + WORLD.width / 2) / WORLD.width) * MINIMAP_WIDTH;
+          const enemyY = ((enemy.position.y + WORLD.height / 2) / WORLD.height) * MINIMAP_HEIGHT;
+          
+          ctx.fillStyle = '#ff4444';
+          ctx.beginPath();
+          ctx.arc(enemyX, enemyY, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      
+      // Draw pickups (green dots)
+      const pickups = entityManager.entities.pickups;
+      pickups.forEach(pickup => {
+        if (pickup.active) {
+          const pickupX = ((pickup.position.x + WORLD.width / 2) / WORLD.width) * MINIMAP_WIDTH;
+          const pickupY = ((pickup.position.y + WORLD.height / 2) / WORLD.height) * MINIMAP_HEIGHT;
+          
+          ctx.fillStyle = '#44ff44';
+          ctx.beginPath();
+          ctx.arc(pickupX, pickupY, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    } else {
+      // Fallback to gameState player position when entityManager not available (menu state)
+      if (gameState.lives > 0) {
+        const playerX = (gameState.player.position.x + WORLD.width / 2) * scaleX;
+        const playerY = (gameState.player.position.y + WORLD.height / 2) * scaleY;
+        
+        ctx.fillStyle = '#4a90e2';
+        ctx.beginPath();
+        ctx.arc(playerX, playerY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw player direction indicator
+        const angle = gameState.player.rotation;
+        const dirLength = 8;
+        const dirX = playerX + Math.cos(angle) * dirLength;
+        const dirY = playerY + Math.sin(angle) * dirLength;
+        
+        ctx.strokeStyle = '#4a90e2';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(playerX, playerY);
+        ctx.lineTo(dirX, dirY);
+        ctx.stroke();
+      }
     }
 
-    // TODO: Draw asteroids, enemies, pickups, etc. when entity systems are connected
-    // This would require access to the entity pools and their positions
-
-  }, [gameState.player.position, gameState.player.rotation, gameState.lives]);
+  }, [gameState.player.position, gameState.player.rotation, gameState.lives, entityManager]);
 
   const handleMouseEnter = () => {
     setFocused(true);
