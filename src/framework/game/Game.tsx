@@ -106,7 +106,29 @@ export const Game: React.FC = () => {
     const ss = new ScoringSystem(ps);
     const ws = new WaveSystem(em, am, ps, vm);
     
+    // Register wave callbacks to open hangar on even waves
+    let waveCallbacksRegistered = false;
+    if (!waveCallbacksRegistered) {
+      waveCallbacksRegistered = true;
+      ws.onWaveCompleteCallback((wave, _perfect) => {
+        if (wave % 2 === 0) {
+          gameStateManager.setState('paused');
+          // Render Hangar overlay via overlay manager/state
+        } else {
+          setTimeout(() => ws.startWave(), 1500);
+        }
+      });
+    }
+    
     console.log('[Complete Game] Systems created - EntityManager:', em);
+    
+    // Register scoring hook for asteroid kills with size detection
+    cs.onCollision('bullet-asteroid', (event) => {
+      if (event.entityB) {
+        // Cast to Asteroid and use the existing awardAsteroidPoints method
+        ss.awardAsteroidPoints(event.entityB as any);
+      }
+    });
     
     // Set up system connections
     // ps.initialize(); // Remove if method doesn't exist
@@ -272,10 +294,13 @@ export const Game: React.FC = () => {
         }
       }
       
-      // Handle minimap toggle (Tab key only during gameplay)
-      if (e.code === 'Tab' && currentState === 'playing') {
-        e.preventDefault();
-        setMinimapOpacity(prev => prev === 1.0 ? 0.1 : 1.0);
+      // Handle minimap toggle (Tab key)
+      if (e.code === 'Tab' && currentState !== 'menu') {
+        const target = e.target as HTMLElement;
+        if (!target || !(/input|textarea|select/i.test(target.tagName) || target.isContentEditable)) {
+          e.preventDefault();
+          setMinimapOpacity(v => (v < 0.5 ? 1.0 : 0.1));
+        }
       }
     };
     
@@ -307,8 +332,8 @@ export const Game: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousedown', handleMouseDown, { passive: false });
+    window.addEventListener('mouseup', handleMouseUp, { passive: false });
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -471,17 +496,28 @@ export const Game: React.FC = () => {
           />
         )}
         
-        {(currentState === 'playing' || currentState === 'paused') && (
-          <HUD
-            stats={gameStats}
-            showFPS={gameSettings.showFPS}
-            fps={fps}
-            waveProgress={waveSystem?.getWaveProgress() || 0}
-            isPaused={currentState === 'paused'}
-            entityManager={entityManager}
-            minimapOpacity={minimapOpacity}
-          />
-        )}
+        {(currentState === 'playing' || currentState === 'paused') && (() => {
+          const refs = threeScene.sceneRefs.current;
+          const viewport = refs ? {
+            cx: refs.camera.position.x,
+            cy: refs.camera.position.y,
+            camW: refs.camera.right - refs.camera.left,
+            camH: refs.camera.top - refs.camera.bottom,
+          } : undefined;
+          
+          return (
+            <HUD
+              stats={gameStats}
+              showFPS={gameSettings.showFPS}
+              fps={fps}
+              waveProgress={waveSystem?.getWaveProgress() || 0}
+              isPaused={currentState === 'paused'}
+              entityManager={entityManager || undefined}
+              viewport={viewport}
+              minimapOpacity={minimapOpacity}
+            />
+          );
+        })()}
         
         {/* Temporary currency display */}
         {(currentState === 'playing' || currentState === 'paused') && (

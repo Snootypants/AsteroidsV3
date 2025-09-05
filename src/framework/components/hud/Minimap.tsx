@@ -4,10 +4,10 @@ import { WORLD } from '../../constants/gameConstants';
 import { EntityManager } from '../../systems/EntityManager';
 
 interface ViewportInfo {
-  centerX: number;
-  centerY: number;
-  width: number;
-  height: number;
+  cx: number;
+  cy: number;
+  camW: number;
+  camH: number;
 }
 
 interface MinimapProps {
@@ -54,9 +54,6 @@ export const Minimap: React.FC<MinimapProps> = ({
     // Clear canvas
     ctx.clearRect(0, 0, MINIMAP_WIDTH, MINIMAP_HEIGHT);
 
-    // Set up scaling from world coordinates to minimap coordinates
-    const scaleX = MINIMAP_WIDTH / WORLD.width;
-    const scaleY = MINIMAP_HEIGHT / WORLD.height;
 
     // Draw world boundary
     ctx.strokeStyle = 'rgba(120, 150, 255, 0.4)';
@@ -170,12 +167,12 @@ export const Minimap: React.FC<MinimapProps> = ({
     // Draw viewport rectangle if viewport info is available
     if (viewport) {
       const topLeft = worldToMinimap(
-        viewport.centerX - viewport.width / 2,
-        viewport.centerY + viewport.height / 2 // Remember Y is flipped
+        viewport.cx - viewport.camW / 2,
+        viewport.cy + viewport.camH / 2 // Remember Y is flipped
       );
       const bottomRight = worldToMinimap(
-        viewport.centerX + viewport.width / 2,
-        viewport.centerY - viewport.height / 2
+        viewport.cx + viewport.camW / 2,
+        viewport.cy - viewport.camH / 2
       );
       
       const rectWidth = bottomRight.x - topLeft.x;

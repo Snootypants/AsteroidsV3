@@ -12,6 +12,7 @@ export interface HUDProps {
   className?: string;
   entityManager?: EntityManager;
   minimapOpacity?: number;
+  viewport?: { cx: number; cy: number; camW: number; camH: number };
 }
 
 /**
@@ -26,7 +27,8 @@ export const HUD: React.FC<HUDProps> = ({
   isPaused = false,
   className = '',
   entityManager,
-  minimapOpacity = 1.0
+  minimapOpacity = 1.0,
+  viewport
 }) => {
   const formatScore = (score: number): string => {
     return score.toLocaleString();
@@ -187,22 +189,97 @@ export const HUD: React.FC<HUDProps> = ({
         >
           <Minimap 
             gameState={{
+              // Core game state - minimal required values
+              score: stats.score,
+              wave: stats.wave,
+              lives: stats.lives,
+              shipsLost: 0,
+              gameOver: false,
+              paused: false,
+              pausedForUpgrade: false,
+              started: true,
+              gamePhase: 'playing' as const,
+              
+              // Player state
+              invuln: 0,
+              combo: 0,
+              comboTimer: 0,
+              playerShotCounter: 0,
               player: {
                 position: { x: 0, y: 0 }, // Will be updated from actual ship position
                 rotation: 0
               },
-              lives: stats.lives,
+              
+              // Currencies - minimal defaults
+              currencies: {
+                salvage: 0,
+                gold: 0,
+                platinum: 0,
+                adamantium: 0
+              },
+              
+              // Mods - minimal defaults
+              mods: {
+                fireRateMul: 1.0,
+                engineMul: 1.0,
+                spread: false as const,
+                pierce: false as const,
+                shields: 0,
+                ricochet: 0,
+                drones: 0
+              },
+              
+              // UI state - minimal defaults
+              currentOverlay: 'none' as const,
+              overlay: { show: false, type: 'none' as const },
+              upgradeHistory: [],
+              rerollCount: 0,
+              baseRerollCost: 10,
+              rerollCost: 10,
+              banishCost: 25,
+              
+              // Sound settings - minimal defaults
+              sound: {
+                master: 1.0,
+                sfx: 1.0,
+                music: 1.0,
+                muted: false
+              },
+              
+              // UI/Input state
               ui: {
-                minimapFocused: false
-              }
+                showReticle: false,
+                mousePosition: { x: 0, y: 0 },
+                minimapFocused: false,
+                hideUpgrades: false
+              },
+              
+              // Debug state - minimal defaults
+              debug: {
+                showFPS: false,
+                showStatusConsole: false,
+                logs: []
+              },
+              
+              // Stats tracking - minimal defaults
+              stats: {
+                asteroidsDestroyed: 0,
+                shotsFired: 0,
+                shotsHit: 0,
+                playTime: 0
+              },
+              
+              // Camera and input
+              currentZoom: 1.0,
+              mouseEnabled: true
             }}
             onUpdateGameState={() => {}}
             entityManager={entityManager}
-            viewport={{
-              centerX: 0, // Will be updated from camera position
-              centerY: 0,
-              width: 150, // Approximate visible area
-              height: 100
+            viewport={viewport || {
+              cx: 0, // Fallback values
+              cy: 0,
+              camW: 150,
+              camH: 100
             }}
           />
         </div>

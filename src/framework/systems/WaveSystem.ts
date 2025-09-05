@@ -1,5 +1,4 @@
 import { EntityManager } from './EntityManager';
-import { PhysicsSystem } from './PhysicsSystem';
 import { AsteroidSize } from '../entities/Asteroid';
 import { WORLD, ASTEROIDS } from '../constants/gameConstants';
 import { AudioManager } from './AudioManager';
@@ -330,16 +329,22 @@ export class WaveSystem {
     // Spawn asteroids
     for (let i = 0; i < config.asteroidSizes.length; i++) {
       const size = config.asteroidSizes[i];
-      const spawn = this.getSpawnPosition();
+      const position = this.getSpawnPosition();
       
-      // Apply speed multiplier to velocity
-      const velocity = {
-        x: spawn.velocity.x * config.speedMultiplier,
-        y: spawn.velocity.y * config.speedMultiplier
-      };
+      // Calculate inward velocity with tangential component
+      const toCenter = new THREE.Vector3(-position.x, -position.y, 0).normalize();
+      const tangent  = new THREE.Vector3(-toCenter.y, toCenter.x, 0);
+      const base = ASTEROIDS.baseSpeed * config.speedMultiplier;
+      const speed = base * (0.8 + Math.random() * 0.4);
+      const tangentAmt = (Math.random() - 0.5) * 0.5 * base;
+      const velocity = new THREE.Vector3(
+        toCenter.x * speed + tangent.x * tangentAmt,
+        toCenter.y * speed + tangent.y * tangentAmt,
+        0
+      );
       
-      const asteroid = this.entityManager.spawnAsteroid(size, spawn.position.x, spawn.position.y, velocity.x, velocity.y);
-      console.log('[WaveSystem] Spawned asteroid', i + 1, 'of', config.asteroidSizes.length, '- size:', size, 'at:', spawn.position);
+      this.entityManager.spawnAsteroid(size, position.x, position.y, velocity.x, velocity.y);
+      console.log('[WaveSystem] Spawned asteroid', i + 1, 'of', config.asteroidSizes.length, '- size:', size, 'at:', position);
     }
     
     // Schedule enemy spawning if needed
@@ -353,88 +358,36 @@ export class WaveSystem {
   /**
    * Spawn enemies for the wave
    * @param count Number of enemies to spawn
-   * @param speedMultiplier Speed multiplier for this wave
+   * @param _speedMultiplier Speed multiplier for this wave (unused)
    */
-  private spawnEnemies(count: number, speedMultiplier: number): void {
+  private spawnEnemies(count: number, _speedMultiplier: number): void {
     for (let i = 0; i < count; i++) {
       // Spawn enemy with delay between each
       setTimeout(() => {
-        const spawn = this.getSpawnPosition();
+        const position = this.getSpawnPosition();
         
         // TODO: Implement enemy spawning when Enemy entity is created
-        // this.entityManager.spawnEnemy(spawn.position.x, spawn.position.y, spawn.velocity.x * speedMultiplier, spawn.velocity.y * speedMultiplier);
-        console.log(`Would spawn enemy at (${spawn.position.x.toFixed(1)}, ${spawn.position.y.toFixed(1)}) with velocity (${(spawn.velocity.x * speedMultiplier).toFixed(2)}, ${(spawn.velocity.y * speedMultiplier).toFixed(2)})`);
+        // this.entityManager.spawnEnemy(position.x, position.y, velocityX, velocityY);
+        console.log(`Would spawn enemy at (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`);
       }, i * 1000); // 1 second between enemy spawns
     }
   }
   
   /**
-   * Get spawn position at world edge with inward velocity
-   * @returns { position, velocity } with spawn position and initial velocity
+   * Get spawn position at world edge
+   * @returns spawn position outside world bounds
    */
-  private getSpawnPosition(): { position: { x: number; y: number }, velocity: { x: number; y: number } } {
-    const margin = 20; // Spawn margin outside world bounds
-    
-    // Choose a random edge: 0=top, 1=right, 2=bottom, 3=left
-    const edge = Math.floor(Math.random() * 4);
-    
-    let position: { x: number; y: number };
-    let velocity: { x: number; y: number };
-    
-    // Base speed with ±40% jitter as per spec
-    const baseSpeed = ASTEROIDS.baseSpeed;
-    const speedJitter = 0.4;
-    const speed = baseSpeed * (1 + (Math.random() - 0.5) * speedJitter);
-    
-    switch (edge) {
-      case 0: // Top edge
-        position = {
-          x: (Math.random() - 0.5) * WORLD.width,
-          y: WORLD.height / 2 + margin
-        };
-        // Inward velocity with tangential component
-        velocity = {
-          x: (Math.random() - 0.5) * speed * 0.5, // Tangential component
-          y: -speed * (0.6 + Math.random() * 0.4) // Mainly inward
-        };
-        break;
-        
-      case 1: // Right edge
-        position = {
-          x: WORLD.width / 2 + margin,
-          y: (Math.random() - 0.5) * WORLD.height
-        };
-        velocity = {
-          x: -speed * (0.6 + Math.random() * 0.4), // Mainly inward
-          y: (Math.random() - 0.5) * speed * 0.5 // Tangential component
-        };
-        break;
-        
-      case 2: // Bottom edge
-        position = {
-          x: (Math.random() - 0.5) * WORLD.width,
-          y: -WORLD.height / 2 - margin
-        };
-        velocity = {
-          x: (Math.random() - 0.5) * speed * 0.5, // Tangential component
-          y: speed * (0.6 + Math.random() * 0.4) // Mainly inward
-        };
-        break;
-        
-      case 3: // Left edge
-      default:
-        position = {
-          x: -WORLD.width / 2 - margin,
-          y: (Math.random() - 0.5) * WORLD.height
-        };
-        velocity = {
-          x: speed * (0.6 + Math.random() * 0.4), // Mainly inward
-          y: (Math.random() - 0.5) * speed * 0.5 // Tangential component
-        };
-        break;
+  private getSpawnPosition(): { x: number; y: number } {
+    const margin = 20;
+    const halfW = WORLD.width / 2;
+    const halfH = WORLD.height / 2;
+    const side = Math.floor(Math.random() * 4); // 0:L,1:R,2:T,3:B
+    switch (side) {
+      case 0: return { x: -halfW - margin, y: (Math.random() * 2 - 1) * halfH };
+      case 1: return { x:  halfW + margin, y: (Math.random() * 2 - 1) * halfH };
+      case 2: return { x: (Math.random() * 2 - 1) * halfW, y:  halfH + margin };
+      default:return { x: (Math.random() * 2 - 1) * halfW, y: -halfH - margin };
     }
-    
-    return { position, velocity };
   }
   
   /**

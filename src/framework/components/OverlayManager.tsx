@@ -65,7 +65,8 @@ export const OverlayManager: React.FC<OverlayManagerProps> = ({
     onStartGame,
     onPauseGame,
     onResumeGame,
-    onRestartGame
+    onRestartGame,
+    onClose: () => onUpdateGameState({ overlay: { show: false, type: 'none' } })
   };
 
   return (

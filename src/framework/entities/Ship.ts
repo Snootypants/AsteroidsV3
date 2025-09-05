@@ -143,14 +143,13 @@ export class Ship extends BaseEntity {
     // Ship rotation - smoothly rotate to target angle
     this.updateRotation(dt);
 
-    // Apply thrust if thrusting
-    if (this.thrusting) {
-      this.applyThrust(dt);
-    }
-    
-    // Apply reverse thrust if reverse thrusting
-    if (this.thrustingReverse) {
-      this.applyReverseThrust(dt);
+    // Apply thrust (forward or reverse)
+    if (this.thrusting || this.thrustingReverse) {
+      const dir = this.thrusting ? 1.0 : -0.65; // reverse uses opposite sign
+      const thrustX = Math.sin(this.rotation) * PLAYER.accel * dir * dt;
+      const thrustY = Math.cos(this.rotation) * PLAYER.accel * dir * dt;
+      this.velocity.x += thrustX;
+      this.velocity.y += thrustY;
     }
 
     // Apply friction
@@ -189,25 +188,6 @@ export class Ship extends BaseEntity {
     }
   }
 
-  private applyThrust(dt: number): void {
-    // Calculate thrust direction (ship faces up by default)
-    const thrustX = Math.sin(this.rotation) * PLAYER.accel * dt;
-    const thrustY = Math.cos(this.rotation) * PLAYER.accel * dt;
-    
-    this.velocity.x += thrustX;
-    this.velocity.y += thrustY;
-  }
-
-  private applyReverseThrust(dt: number): void {
-    // Calculate reverse thrust direction (opposite to ship's facing)
-    // Reverse thrust is 65% of forward thrust power
-    const reverseAccel = PLAYER.accel * 0.65;
-    const thrustX = -Math.sin(this.rotation) * reverseAccel * dt;
-    const thrustY = -Math.cos(this.rotation) * reverseAccel * dt;
-    
-    this.velocity.x += thrustX;
-    this.velocity.y += thrustY;
-  }
 
   private updateVisualEffects(_dt: number): void {
     // Update boost flames visibility

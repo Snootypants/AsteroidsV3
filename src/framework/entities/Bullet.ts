@@ -139,7 +139,7 @@ export class Bullet extends BaseEntity {
 
   protected onSpawn(): void {
     // Reset bullet state when spawned
-    this.lifetime = BULLET.life;
+    this.lifetime = (VISIBLE_HEIGHT * 1.5) / BULLET.speed;
     this.pierce = 0;
     this.ricochet = 0;
     this.damage = 1.0;
@@ -157,7 +157,7 @@ export class Bullet extends BaseEntity {
 
   protected onReset(): void {
     // Reset all bullet properties
-    this.lifetime = BULLET.life;
+    this.lifetime = (VISIBLE_HEIGHT * 1.5) / BULLET.speed;
     this.pierce = 0;
     this.ricochet = 0;
     this.damage = 1.0;

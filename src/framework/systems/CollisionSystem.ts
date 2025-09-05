@@ -426,6 +426,18 @@ export class CollisionSystem {
     particleSystem?.emit(explosionType, position);
     vfxManager?.shakeScreen(shakePreset);
     debrisSystem?.spawnDebris(debrisType, position);
+    
+    // Currency drops (weighted). Uses existing spawn helpers and magnet targeting.
+    try {
+      const ships = entityManager.getActiveEntities('ships') as Ship[];
+      const dropCount = Math.random() < 0.7 ? 1 : 2; // 70% one, 30% two
+      for (let i = 0; i < dropCount; i++) {
+        const p = entityManager.spawnRandomPickup(position.x, position.y);
+        if (ships.length) p.setMagnetTarget(ships[0]);
+      }
+    } catch (e) {
+      console.warn('[CollisionSystem] Pickup spawn failed:', e);
+    }
   }
   
   /**
@@ -606,20 +618,11 @@ export class CollisionSystem {
       // Audio and visual feedback based on pickup type
       switch (pickupType) {
         case 'salvage':
+        case 'gold':
+        case 'platinum':
+        case 'adamantium':
           audioManager?.playSound('pickup.salvage');
           vfxManager?.flash('pickup_green');
-          break;
-        case 'gold':
-          audioManager?.playSound('pickup.coin');
-          vfxManager?.flash('pickup_yellow');
-          break;
-        case 'platinum':
-          audioManager?.playSound('pickup.coin');
-          vfxManager?.flash('pickup_white');
-          break;
-        case 'adamantium':
-          audioManager?.playSound('pickup.rare');
-          vfxManager?.flash('pickup_purple');
           break;
         case 'health':
         case 'shield':
