@@ -2,26 +2,34 @@ import React from 'react';
 import { GameState } from '../../hooks/useGameState';
 
 interface HangarScreenProps {
-  gameState: GameState;
-  onUpdateGameState: (updates: Partial<GameState>) => void;
-  onStartGame: () => void;
+  gameState?: GameState;
+  onUpdateGameState?: (updates: Partial<GameState>) => void;
+  onStartGame?: () => void;
+  onClose: () => void;
 }
 
 export const HangarScreen: React.FC<HangarScreenProps> = ({
   gameState,
   onUpdateGameState,
-  onStartGame
+  onStartGame,
+  onClose
 }) => {
   const handleNextMission = () => {
     // Start the next wave/mission
-    onUpdateGameState({
-      wave: gameState.wave + 1,
-      overlay: {
-        show: false,
-        type: 'none'
-      }
-    });
-    onStartGame();
+    if (onUpdateGameState && gameState) {
+      onUpdateGameState({
+        wave: gameState.wave + 1,
+        overlay: {
+          show: false,
+          type: 'none'
+        }
+      });
+    }
+    if (onStartGame) {
+      onStartGame();
+    } else {
+      onClose(); // Use onClose from Game.tsx
+    }
   };
 
   const handleReroll = () => {
@@ -36,12 +44,14 @@ export const HangarScreen: React.FC<HangarScreenProps> = ({
 
   const handleToggleVisibility = () => {
     // Toggle upgrade visibility/filtering
-    onUpdateGameState({
-      ui: {
-        ...gameState.ui,
-        hideUpgrades: !gameState.ui.hideUpgrades
-      }
-    });
+    if (onUpdateGameState && gameState) {
+      onUpdateGameState({
+        ui: {
+          ...gameState.ui,
+          hideUpgrades: !gameState.ui.hideUpgrades
+        }
+      });
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -71,35 +81,35 @@ export const HangarScreen: React.FC<HangarScreenProps> = ({
 
   return (
     <div 
-      className={`overlay hangar-overlay ${gameState.overlay.show ? 'show' : 'hide'}`}
+      className="overlay hangar-overlay show"
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
       <img 
         className="overlay-img" 
-        src="/assets/images/hangarbg.jpg" 
+        src={new URL('../../../assets/Hanger.png', import.meta.url).toString()}
         alt="Hangar background"
         loading="eager"
       />
 
       <div className="hangar-title">
         <h1>HANGAR</h1>
-        <p>Wave {gameState.wave} Complete - Prepare for Wave {gameState.wave + 1}</p>
+        <p>Wave {gameState?.wave || 1} Complete - Prepare for Wave {(gameState?.wave || 1) + 1}</p>
       </div>
 
       {/* Currency display */}
       <div className="hangar-currency">
         <div className="currency-item salvage">
-          {gameState.currencies.salvage}
+          {gameState?.currencies?.salvage || 0}
         </div>
         <div className="currency-item gold">
-          {gameState.currencies.gold}
+          {gameState?.currencies?.gold || 0}
         </div>
         <div className="currency-item platinum">
-          {gameState.currencies.platinum}
+          {gameState?.currencies?.platinum || 0}
         </div>
         <div className="currency-item adamantium">
-          {gameState.currencies.adamantium}
+          {gameState?.currencies?.adamantium || 0}
         </div>
       </div>
 
@@ -128,15 +138,15 @@ export const HangarScreen: React.FC<HangarScreenProps> = ({
       {/* Control buttons */}
       <div className="shop-controls">
         <button className="shop-button reroll" onClick={handleReroll}>
-          Reroll (R) - {gameState.rerollCost} Gold
+          Reroll (R) - {gameState?.rerollCost || 10} Gold
         </button>
         
         <button className="shop-button banish" onClick={handleBanish}>
-          Banish (B) - {gameState.banishCost} Gold
+          Banish (B) - {gameState?.banishCost || 25} Gold
         </button>
         
         <button className="shop-button toggle-vis" onClick={handleToggleVisibility}>
-          {gameState.ui.hideUpgrades ? 'Show' : 'Hide'} Upgrades (H)
+          {gameState?.ui?.hideUpgrades ? 'Show' : 'Hide'} Upgrades (H)
         </button>
         
         <button className="shop-button next-mission" onClick={handleNextMission}>

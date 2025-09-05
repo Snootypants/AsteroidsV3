@@ -11,6 +11,7 @@ import { ScoringSystem } from '../systems/ScoringSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { Ship } from '../entities/Ship';
 import { HUD, MainMenu, GameOver, PauseMenu } from '../ui';
+import { HangarScreen } from '../components/overlays/HangarScreen';
 
 /**
  * Complete Asteroids Game Component
@@ -23,6 +24,28 @@ export const Game: React.FC = () => {
   // Game systems
   const [gameStateManager] = useState(() => new GameStateManager());
   const [entityManager, setEntityManager] = useState<EntityManager | null>(null);
+  
+  // Currency tracking (temporary until integrated with main game state)
+  const [currencies, setCurrencies] = useState({
+    salvage: 0,
+    gold: 0,
+    platinum: 0,
+    adamantium: 0
+  });
+  
+  // Currency collection callback
+  const handleCurrencyCollected = useCallback((type: string, amount: number) => {
+    setCurrencies(prev => ({
+      ...prev,
+      [type]: (prev[type as keyof typeof prev] || 0) + amount
+    }));
+    
+    // Also update pickup count in game stats
+    gameStateManager.updateStats({
+      pickupsCollected: gameStateManager.getStats().pickupsCollected + 1
+    });
+  }, [gameStateManager]);
+  
   const [audioManager, setAudioManager] = useState<AudioManager | null>(null);
   const [particleSystem, setParticleSystem] = useState<ParticleSystem | null>(null);
   const [vfxManager, setVFXManager] = useState<VFXManager | null>(null);
@@ -44,6 +67,10 @@ export const Game: React.FC = () => {
   // Input handling
   const keysPressed = useRef<Set<string>>(new Set());
   const mousePos = useRef({ x: 0, y: 0 });
+  const mousePressed = useRef<Set<number>>(new Set()); // Track mouse button states
+  
+  // Minimap state
+  const [minimapOpacity, setMinimapOpacity] = useState(1.0);
   
   // Performance monitoring
   const [fps, setFps] = useState(60);
@@ -75,7 +102,7 @@ export const Game: React.FC = () => {
     const ps = new ParticleSystem(scene);
     const vm = new VFXManager(camera, scene);
     const ds = new DebrisSystem(scene);
-    const cs = new CollisionSystem(em, am, ps, vm, ds);
+    const cs = new CollisionSystem(em, am, ps, vm, ds, handleCurrencyCollected);
     const ss = new ScoringSystem(ps);
     const ws = new WaveSystem(em, am, ps, vm);
     
@@ -134,6 +161,11 @@ export const Game: React.FC = () => {
           perfectWaves: gameStats.perfectWaves + 1 
         });
       }
+    });
+    
+    ws.onOpenHangarCallback(() => {
+      // Open hangar and pause gameplay
+      gameStateManager.setState('hangar');
     });
     
     // Systems are now ready
@@ -239,6 +271,12 @@ export const Game: React.FC = () => {
           gameStateManager.setState('playing');
         }
       }
+      
+      // Handle minimap toggle (Tab key only during gameplay)
+      if (e.code === 'Tab' && currentState === 'playing') {
+        e.preventDefault();
+        setMinimapOpacity(prev => prev === 1.0 ? 0.1 : 1.0);
+      }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -253,25 +291,43 @@ export const Game: React.FC = () => {
         y: rect.height / 2 - (e.clientY - rect.top)
       };
     };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only handle left click (button 0) during gameplay to avoid UI conflicts
+      if (e.button === 0 && currentState === 'playing') {
+        e.preventDefault();
+        mousePressed.current.add(0);
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      mousePressed.current.delete(e.button);
+    };
     
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [currentState, gameSettings.controls.pause, gameStateManager]);
   
   // Ship controls
   const updateShipControls = (ship: Ship, deltaTime: number) => {
     const isForward = keysPressed.current.has(gameSettings.controls.forward);
+    const isBackward = keysPressed.current.has(gameSettings.controls.backward);
     const isLeft = keysPressed.current.has(gameSettings.controls.left);
     const isRight = keysPressed.current.has(gameSettings.controls.right);
     
     ship.setThrusting(isForward);
+    ship.setThrustingReverse(isBackward);
     
     // Handle rotation: A/D keys override mouse aiming
     if (isLeft || isRight) {
@@ -302,7 +358,8 @@ export const Game: React.FC = () => {
   // Shooting
   const handleShooting = (ship: Ship, entityManager: EntityManager) => {
     const isShooting = gameSettings.autofire || 
-                     keysPressed.current.has(gameSettings.controls.shoot);
+                     keysPressed.current.has(gameSettings.controls.shoot) ||
+                     mousePressed.current.has(0); // Left click
     
     if (isShooting && ship.canShoot()) {
       const bullet = ship.shoot();
@@ -387,6 +444,12 @@ export const Game: React.FC = () => {
     gameStateManager.updateSettings(newSettings);
   }, [gameStateManager]);
   
+  const handleExitHangar = useCallback(() => {
+    // Exit hangar and start next wave
+    gameStateManager.setState('playing');
+    waveSystem?.startWave();
+  }, [gameStateManager, waveSystem]);
+  
   return (
     <div className="relative w-full h-full overflow-hidden bg-black">
       {/* Three.js Canvas Container */}
@@ -416,7 +479,28 @@ export const Game: React.FC = () => {
             waveProgress={waveSystem?.getWaveProgress() || 0}
             isPaused={currentState === 'paused'}
             entityManager={entityManager}
+            minimapOpacity={minimapOpacity}
           />
+        )}
+        
+        {/* Temporary currency display */}
+        {(currentState === 'playing' || currentState === 'paused') && (
+          <div style={{
+            position: 'absolute',
+            top: '80px',
+            right: '20px',
+            background: 'rgba(0,0,0,0.8)',
+            padding: '10px',
+            borderRadius: '5px',
+            color: 'white',
+            fontFamily: 'monospace',
+            fontSize: '12px'
+          }}>
+            <div style={{color: '#00ff88'}}>Salvage: {currencies.salvage}</div>
+            <div style={{color: '#ffd700'}}>Gold: {currencies.gold}</div>
+            <div style={{color: '#e5e4e2'}}>Platinum: {currencies.platinum}</div>
+            <div style={{color: '#9966cc'}}>Adamantium: {currencies.adamantium}</div>
+          </div>
         )}
         
         {currentState === 'paused' && (
@@ -436,6 +520,12 @@ export const Game: React.FC = () => {
             isNewHighScore={isNewHighScore}
             onRestart={handleRestart}
             onMainMenu={handleMainMenu}
+          />
+        )}
+        
+        {currentState === 'hangar' && (
+          <HangarScreen
+            onClose={handleExitHangar}
           />
         )}
       </div>

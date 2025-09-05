@@ -11,6 +11,7 @@ export interface HUDProps {
   isPaused?: boolean;
   className?: string;
   entityManager?: EntityManager;
+  minimapOpacity?: number;
 }
 
 /**
@@ -24,7 +25,8 @@ export const HUD: React.FC<HUDProps> = ({
   waveProgress = 0,
   isPaused = false,
   className = '',
-  entityManager
+  entityManager,
+  minimapOpacity = 1.0
 }) => {
   const formatScore = (score: number): string => {
     return score.toLocaleString();
@@ -179,7 +181,10 @@ export const HUD: React.FC<HUDProps> = ({
       
       {/* Minimap - Bottom Center */}
       {entityManager && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+        <div 
+          className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+          style={{ opacity: minimapOpacity }}
+        >
           <Minimap 
             gameState={{
               player: {
@@ -193,6 +198,12 @@ export const HUD: React.FC<HUDProps> = ({
             }}
             onUpdateGameState={() => {}}
             entityManager={entityManager}
+            viewport={{
+              centerX: 0, // Will be updated from camera position
+              centerY: 0,
+              width: 150, // Approximate visible area
+              height: 100
+            }}
           />
         </div>
       )}

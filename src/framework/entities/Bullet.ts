@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BaseEntity } from './BaseEntity';
-import { BULLET } from '../constants/gameConstants';
+import { BULLET, VISIBLE_HEIGHT } from '../constants/gameConstants';
 
 /**
  * Bullet entity with pierce, ricochet, and lifetime mechanics
@@ -26,6 +26,9 @@ export class Bullet extends BaseEntity {
     const vy = Math.cos(direction) * BULLET.speed + inheritVy;
     
     super(x, y, vx, vy, BULLET.r);
+    
+    // Calculate life based on 1.5x visible height travel distance
+    this.lifetime = (VISIBLE_HEIGHT * 1.5) / BULLET.speed;
     
     this.mesh = this.createMesh();
   }

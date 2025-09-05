@@ -3,7 +3,7 @@ import { BaseEntity } from './BaseEntity';
 import { Ship } from './Ship';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
 
-export type PickupType = 'salvage' | 'health' | 'shield' | 'rapidfire' | 'pierce' | 'damage';
+export type PickupType = 'salvage' | 'gold' | 'platinum' | 'adamantium' | 'health' | 'shield' | 'rapidfire' | 'pierce' | 'damage';
 
 export interface PickupProperties {
   type: PickupType;
@@ -35,6 +35,24 @@ export class Pickup extends BaseEntity {
       color: 0x00ff88, // Green
       magnetRange: 50,
       lifetime: 15.0
+    },
+    gold: {
+      value: 5,
+      color: 0xffd700, // Gold
+      magnetRange: 50,
+      lifetime: 15.0
+    },
+    platinum: {
+      value: 2,
+      color: 0xe5e4e2, // Platinum silver
+      magnetRange: 55,
+      lifetime: 12.0
+    },
+    adamantium: {
+      value: 1,
+      color: 0x9966cc, // Purple
+      magnetRange: 60,
+      lifetime: 10.0
     },
     health: {
       value: 25,
@@ -135,6 +153,21 @@ export class Pickup extends BaseEntity {
       case 'salvage':
         // Diamond/crystal shape
         geometry = new THREE.OctahedronGeometry(1.2, 0);
+        break;
+        
+      case 'gold':
+        // Coin/disc shape
+        geometry = new THREE.CylinderGeometry(1.2, 1.2, 0.3, 16);
+        break;
+        
+      case 'platinum':
+        // Smaller coin shape
+        geometry = new THREE.CylinderGeometry(1.0, 1.0, 0.2, 12);
+        break;
+        
+      case 'adamantium':
+        // Rare crystalline shape
+        geometry = new THREE.TetrahedronGeometry(1.4, 0);
         break;
         
       case 'health':
@@ -340,13 +373,41 @@ export class Pickup extends BaseEntity {
   /**
    * Apply the pickup effect to a ship
    * @param ship Ship to apply effect to
+   * @param onCurrencyCollected Optional callback for currency collection
    * @returns True if pickup was consumed
    */
-  public applyToShip(ship: Ship): boolean {
+  public applyToShip(ship: Ship, onCurrencyCollected?: (type: string, amount: number) => void): boolean {
     switch (this.pickupType) {
       case 'salvage':
-        // Add salvage currency (would be tracked in game state)
+        // Add salvage currency
+        if (onCurrencyCollected) {
+          onCurrencyCollected('salvage', this.properties.value);
+        }
         console.log(`Collected ${this.properties.value} salvage`);
+        return true;
+        
+      case 'gold':
+        // Add gold currency
+        if (onCurrencyCollected) {
+          onCurrencyCollected('gold', this.properties.value);
+        }
+        console.log(`Collected ${this.properties.value} gold`);
+        return true;
+        
+      case 'platinum':
+        // Add platinum currency
+        if (onCurrencyCollected) {
+          onCurrencyCollected('platinum', this.properties.value);
+        }
+        console.log(`Collected ${this.properties.value} platinum`);
+        return true;
+        
+      case 'adamantium':
+        // Add adamantium currency
+        if (onCurrencyCollected) {
+          onCurrencyCollected('adamantium', this.properties.value);
+        }
+        console.log(`Collected ${this.properties.value} adamantium`);
         return true;
         
       case 'health':
@@ -415,8 +476,8 @@ export class Pickup extends BaseEntity {
    * @returns Random pickup instance
    */
   public static createRandom(x: number, y: number): Pickup {
-    const types: PickupType[] = ['salvage', 'health', 'shield', 'rapidfire', 'pierce', 'damage'];
-    const weights = [40, 25, 20, 8, 4, 3]; // Weighted probability
+    const types: PickupType[] = ['salvage', 'gold', 'platinum', 'adamantium', 'health', 'shield', 'rapidfire', 'pierce', 'damage'];
+    const weights = [30, 25, 15, 8, 12, 6, 3, 1, 1]; // Weighted probability - currencies more common
     
     const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
     let random = Math.random() * totalWeight;

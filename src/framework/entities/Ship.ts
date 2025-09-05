@@ -11,6 +11,7 @@ export class Ship extends BaseEntity {
   // Ship-specific properties
   private targetRotation: number = 0;
   private thrusting: boolean = false;
+  private thrustingReverse: boolean = false;
   private invulnerable: boolean = false;
   private invulnTime: number = 0;
 
@@ -146,6 +147,11 @@ export class Ship extends BaseEntity {
     if (this.thrusting) {
       this.applyThrust(dt);
     }
+    
+    // Apply reverse thrust if reverse thrusting
+    if (this.thrustingReverse) {
+      this.applyReverseThrust(dt);
+    }
 
     // Apply friction
     this.velocity.x *= PLAYER.friction;
@@ -192,6 +198,17 @@ export class Ship extends BaseEntity {
     this.velocity.y += thrustY;
   }
 
+  private applyReverseThrust(dt: number): void {
+    // Calculate reverse thrust direction (opposite to ship's facing)
+    // Reverse thrust is 65% of forward thrust power
+    const reverseAccel = PLAYER.accel * 0.65;
+    const thrustX = -Math.sin(this.rotation) * reverseAccel * dt;
+    const thrustY = -Math.cos(this.rotation) * reverseAccel * dt;
+    
+    this.velocity.x += thrustX;
+    this.velocity.y += thrustY;
+  }
+
   private updateVisualEffects(_dt: number): void {
     // Update boost flames visibility
     this.boostFlames.forEach(flame => {
@@ -224,6 +241,14 @@ export class Ship extends BaseEntity {
    */
   public setThrusting(thrusting: boolean): void {
     this.thrusting = thrusting;
+  }
+
+  /**
+   * Set reverse thrusting state
+   * @param thrustingReverse Whether ship is reverse thrusting
+   */
+  public setThrustingReverse(thrustingReverse: boolean): void {
+    this.thrustingReverse = thrustingReverse;
   }
   
   /**
@@ -307,6 +332,7 @@ export class Ship extends BaseEntity {
     // Reset ship to initial state
     this.targetRotation = 0;
     this.thrusting = false;
+    this.thrustingReverse = false;
     this.invulnerable = false;
     this.invulnTime = 0;
   }

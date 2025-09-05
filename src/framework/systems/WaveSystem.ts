@@ -1,7 +1,7 @@
 import { EntityManager } from './EntityManager';
 import { PhysicsSystem } from './PhysicsSystem';
 import { AsteroidSize } from '../entities/Asteroid';
-import { WORLD } from '../constants/gameConstants';
+import { WORLD, ASTEROIDS } from '../constants/gameConstants';
 import { AudioManager } from './AudioManager';
 import { ParticleSystem } from './ParticleSystem';
 import { VFXManager } from './VFXManager';
@@ -51,6 +51,7 @@ export class WaveSystem {
   private onWaveStart?: (wave: number) => void;
   private onWaveComplete?: (wave: number, perfect: boolean) => void;
   private onWaveChange?: (waveState: WaveState) => void;
+  private onOpenHangar?: () => void;
   
   constructor(
     entityManager: EntityManager,
@@ -93,6 +94,13 @@ export class WaveSystem {
    */
   public onWaveStateChange(callback: (waveState: WaveState) => void): void {
     this.onWaveChange = callback;
+  }
+  
+  /**
+   * Register hangar open callback
+   */
+  public onOpenHangarCallback(callback: () => void): void {
+    this.onOpenHangar = callback;
   }
   
   /**
@@ -225,8 +233,6 @@ export class WaveSystem {
     
     // Create wave transition particle effect
     if (this.particleSystem) {
-      // Swirling particle transition
-      
       // Create expanding ring of particles
       for (let i = 0; i < 32; i++) {
         setTimeout(() => {
@@ -242,10 +248,16 @@ export class WaveSystem {
       }
     }
     
-    // Auto-start next wave after brief delay
-    setTimeout(() => {
-      this.startWave();
-    }, 2000);
+    // Check if this is an even wave (hangar cadence)
+    if (this.waveState.currentWave % 2 === 0) {
+      // Even wave: open hangar overlay
+      this.onOpenHangar?.();
+    } else {
+      // Odd wave: auto-start after brief delay
+      setTimeout(() => {
+        this.startWave();
+      }, 2000);
+    }
   }
   
   /**
@@ -318,11 +330,16 @@ export class WaveSystem {
     // Spawn asteroids
     for (let i = 0; i < config.asteroidSizes.length; i++) {
       const size = config.asteroidSizes[i];
-      const position = this.getSpawnPosition();
-      const velocity = PhysicsSystem.getRandomVelocity(10 * config.speedMultiplier, 30 * config.speedMultiplier);
+      const spawn = this.getSpawnPosition();
       
-      const asteroid = this.entityManager.spawnAsteroid(size, position.x, position.y, velocity.x, velocity.y);
-      console.log('[WaveSystem] Spawned asteroid', i + 1, 'of', config.asteroidSizes.length, '- size:', size, 'at:', position);
+      // Apply speed multiplier to velocity
+      const velocity = {
+        x: spawn.velocity.x * config.speedMultiplier,
+        y: spawn.velocity.y * config.speedMultiplier
+      };
+      
+      const asteroid = this.entityManager.spawnAsteroid(size, spawn.position.x, spawn.position.y, velocity.x, velocity.y);
+      console.log('[WaveSystem] Spawned asteroid', i + 1, 'of', config.asteroidSizes.length, '- size:', size, 'at:', spawn.position);
     }
     
     // Schedule enemy spawning if needed
@@ -340,41 +357,84 @@ export class WaveSystem {
    */
   private spawnEnemies(count: number, speedMultiplier: number): void {
     for (let i = 0; i < count; i++) {
-      const position = this.getSpawnPosition();
-      
       // Spawn enemy with delay between each
       setTimeout(() => {
+        const spawn = this.getSpawnPosition();
+        
         // TODO: Implement enemy spawning when Enemy entity is created
-        // this.entityManager.spawnEnemy(position.x, position.y, speedMultiplier);
-        console.log(`Would spawn enemy at (${position.x.toFixed(1)}, ${position.y.toFixed(1)}) with speed ${speedMultiplier.toFixed(2)}`);
+        // this.entityManager.spawnEnemy(spawn.position.x, spawn.position.y, spawn.velocity.x * speedMultiplier, spawn.velocity.y * speedMultiplier);
+        console.log(`Would spawn enemy at (${spawn.position.x.toFixed(1)}, ${spawn.position.y.toFixed(1)}) with velocity (${(spawn.velocity.x * speedMultiplier).toFixed(2)}, ${(spawn.velocity.y * speedMultiplier).toFixed(2)})`);
       }, i * 1000); // 1 second between enemy spawns
     }
   }
   
   /**
-   * Get a safe spawn position away from player
-   * @returns Spawn position
+   * Get spawn position at world edge with inward velocity
+   * @returns { position, velocity } with spawn position and initial velocity
    */
-  private getSpawnPosition(): { x: number; y: number } {
-    const minDistance = 150; // Minimum distance from center (player spawn)
-    const maxDistance = Math.min(WORLD.width, WORLD.height) / 2 - 50;
+  private getSpawnPosition(): { position: { x: number; y: number }, velocity: { x: number; y: number } } {
+    const margin = 20; // Spawn margin outside world bounds
+    
+    // Choose a random edge: 0=top, 1=right, 2=bottom, 3=left
+    const edge = Math.floor(Math.random() * 4);
     
     let position: { x: number; y: number };
-    let attempts = 0;
+    let velocity: { x: number; y: number };
     
-    do {
-      const angle = Math.random() * Math.PI * 2;
-      const distance = minDistance + Math.random() * (maxDistance - minDistance);
-      
-      position = {
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance
-      };
-      
-      attempts++;
-    } while (attempts < 10); // Fallback after 10 attempts
+    // Base speed with ±40% jitter as per spec
+    const baseSpeed = ASTEROIDS.baseSpeed;
+    const speedJitter = 0.4;
+    const speed = baseSpeed * (1 + (Math.random() - 0.5) * speedJitter);
     
-    return position;
+    switch (edge) {
+      case 0: // Top edge
+        position = {
+          x: (Math.random() - 0.5) * WORLD.width,
+          y: WORLD.height / 2 + margin
+        };
+        // Inward velocity with tangential component
+        velocity = {
+          x: (Math.random() - 0.5) * speed * 0.5, // Tangential component
+          y: -speed * (0.6 + Math.random() * 0.4) // Mainly inward
+        };
+        break;
+        
+      case 1: // Right edge
+        position = {
+          x: WORLD.width / 2 + margin,
+          y: (Math.random() - 0.5) * WORLD.height
+        };
+        velocity = {
+          x: -speed * (0.6 + Math.random() * 0.4), // Mainly inward
+          y: (Math.random() - 0.5) * speed * 0.5 // Tangential component
+        };
+        break;
+        
+      case 2: // Bottom edge
+        position = {
+          x: (Math.random() - 0.5) * WORLD.width,
+          y: -WORLD.height / 2 - margin
+        };
+        velocity = {
+          x: (Math.random() - 0.5) * speed * 0.5, // Tangential component
+          y: speed * (0.6 + Math.random() * 0.4) // Mainly inward
+        };
+        break;
+        
+      case 3: // Left edge
+      default:
+        position = {
+          x: -WORLD.width / 2 - margin,
+          y: (Math.random() - 0.5) * WORLD.height
+        };
+        velocity = {
+          x: speed * (0.6 + Math.random() * 0.4), // Mainly inward
+          y: (Math.random() - 0.5) * speed * 0.5 // Tangential component
+        };
+        break;
+    }
+    
+    return { position, velocity };
   }
   
   /**

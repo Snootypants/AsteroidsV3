@@ -35,18 +35,23 @@ export class CollisionSystem {
   private vfxManager?: VFXManager;
   private debrisSystem?: DebrisSystem;
   
+  // Currency collection callback
+  private onCurrencyCollected?: (type: string, amount: number) => void;
+  
   constructor(
     entityManager: EntityManager,
     audioManager?: AudioManager,
     particleSystem?: ParticleSystem,
     vfxManager?: VFXManager,
-    debrisSystem?: DebrisSystem
+    debrisSystem?: DebrisSystem,
+    onCurrencyCollected?: (type: string, amount: number) => void
   ) {
     this.entityManager = entityManager;
     this.audioManager = audioManager;
     this.particleSystem = particleSystem;
     this.vfxManager = vfxManager;
     this.debrisSystem = debrisSystem;
+    this.onCurrencyCollected = onCurrencyCollected;
   }
   
   /**
@@ -328,7 +333,8 @@ export class CollisionSystem {
             this.entityManager,
             this.audioManager,
             this.particleSystem,
-            this.vfxManager
+            this.vfxManager,
+            this.onCurrencyCollected
           );
           
           this.triggerCollision({
@@ -578,6 +584,7 @@ export class CollisionSystem {
    * @param audioManager Optional audio manager for sound effects
    * @param particleSystem Optional particle system for collection effects
    * @param vfxManager Optional VFX manager for visual feedback
+   * @param onCurrencyCollected Optional callback for currency collection
    */
   public static handleShipPickupCollision(
     ship: Ship,
@@ -585,13 +592,14 @@ export class CollisionSystem {
     entityManager: EntityManager,
     audioManager?: AudioManager,
     particleSystem?: ParticleSystem,
-    vfxManager?: VFXManager
+    vfxManager?: VFXManager,
+    onCurrencyCollected?: (type: string, amount: number) => void
   ): void {
     const pickupPosition = pickup.position.clone();
     const pickupType = pickup.pickupType; // Use the pickupType property
     
     // Apply pickup effect
-    if (pickup.applyToShip(ship)) {
+    if (pickup.applyToShip(ship, onCurrencyCollected)) {
       // Remove pickup if it was consumed
       pickup.despawn(entityManager.getScene());
       
@@ -600,6 +608,18 @@ export class CollisionSystem {
         case 'salvage':
           audioManager?.playSound('pickup.salvage');
           vfxManager?.flash('pickup_green');
+          break;
+        case 'gold':
+          audioManager?.playSound('pickup.coin');
+          vfxManager?.flash('pickup_yellow');
+          break;
+        case 'platinum':
+          audioManager?.playSound('pickup.coin');
+          vfxManager?.flash('pickup_white');
+          break;
+        case 'adamantium':
+          audioManager?.playSound('pickup.rare');
+          vfxManager?.flash('pickup_purple');
           break;
         case 'health':
         case 'shield':

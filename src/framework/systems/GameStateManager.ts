@@ -1,4 +1,4 @@
-export type GameState = 'menu' | 'playing' | 'paused' | 'gameOver' | 'settings' | 'highScores';
+export type GameState = 'menu' | 'playing' | 'paused' | 'gameOver' | 'settings' | 'highScores' | 'hangar';
 
 export interface GameStats {
   score: number;
@@ -26,6 +26,7 @@ export interface GameSettings {
   autofire: boolean;
   controls: {
     forward: string;
+    backward: string;
     left: string;
     right: string;
     shoot: string;
@@ -64,6 +65,7 @@ export class GameStateManager {
     autofire: false,
     controls: {
       forward: 'KeyW',
+      backward: 'KeyS',
       left: 'KeyA',
       right: 'KeyD',
       shoot: 'Space',
